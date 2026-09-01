@@ -1,0 +1,80 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/qpp_cm/ingest_qpp_cm_2025_cost_measure_information_forms.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "qpp_cm"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/qpp_cm/2025/2025-cost-measure-information-forms/"
+documents = [
+    { file = "2025-12-py2025-mif-ebcm-aki-new-hd.pdf", title = "2025 Performance Year Cost Measure Information Forms — Acute Kidney Injury Requiring New Inpatient Dialysis", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_aki_new_hd" },
+    { file = "2025-12-py2025-mif-ebcm-cataract1.pdf", title = "2025 Performance Year Cost Measure Information Forms — Cataract Removal with Intraocular Lens (IOL) Implantation", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_cataract1" },
+    { file = "2025-12-py2025-mif-ebcm-chron-copd.pdf", title = "2025 Performance Year Cost Measure Information Forms — Asthma/Chronic Obstructive Pulmonary Disease (COPD)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_chron_copd" },
+    { file = "2025-12-py2025-mif-ebcm-ckd.pdf", title = "2025 Performance Year Cost Measure Information Forms — Chronic Kidney Disease (CKD)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_ckd" },
+    { file = "2025-12-py2025-mif-ebcm-colrec-rsct.pdf", title = "2025 Performance Year Cost Measure Information Forms — Colon and Rectal Resection", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_colrec_rsct" },
+    { file = "2025-12-py2025-mif-ebcm-depression.pdf", title = "2025 Performance Year Cost Measure Information Forms — Depression", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_depression" },
+    { file = "2025-12-py2025-mif-ebcm-diabetes.pdf", title = "2025 Performance Year Cost Measure Information Forms — Diabetes", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_diabetes" },
+    { file = "2025-12-py2025-mif-ebcm-el-ha.pdf", title = "2025 Performance Year Cost Measure Information Forms — Elective Primary Hip Arthroplasty", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_el_ha" },
+    { file = "2025-12-py2025-mif-ebcm-emergency.pdf", title = "2025 Performance Year Cost Measure Information Forms — Emergency Medicine", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_emergency" },
+    { file = "2025-12-py2025-mif-ebcm-esrd.pdf", title = "2025 Performance Year Cost Measure Information Forms — End-Stage Renal Disease (ESRD)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_esrd" },
+    { file = "2025-12-py2025-mif-ebcm-fihr.pdf", title = "2025 Performance Year Cost Measure Information Forms — Femoral or Inguinal Hernia Repair", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_fihr" },
+    { file = "2025-12-py2025-mif-ebcm-hd-access.pdf", title = "2025 Performance Year Cost Measure Information Forms — Hemodialysis Access Creation", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_hd_access" },
+    { file = "2025-12-py2025-mif-ebcm-heart-fail.pdf", title = "2025 Performance Year Cost Measure Information Forms — Heart Failure", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_heart_fail" },
+    { file = "2025-12-py2025-mif-ebcm-ich-cva.pdf", title = "2025 Performance Year Cost Measure Information Forms — Intracranial Hemorrhage or Cerebral Infarction", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_ich_cva" },
+    { file = "2025-12-py2025-mif-ebcm-ip-copd.pdf", title = "2025 Performance Year Cost Measure Information Forms — Inpatient Chronic Obstructive Pulmonary Disease (COPD) Exacerbation", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_ip_copd" },
+    { file = "2025-12-py2025-mif-ebcm-ip-pci.pdf", title = "2025 Performance Year Cost Measure Information Forms — Inpatient Percutaneous Coronary Intervention (PCI)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_ip_pci" },
+    { file = "2025-12-py2025-mif-ebcm-kidney-tplt.pdf", title = "2025 Performance Year Cost Measure Information Forms — Kidney Transplant Management", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_kidney_tplt" },
+    { file = "2025-12-py2025-mif-ebcm-knee-arthro.pdf", title = "2025 Performance Year Cost Measure Information Forms — Knee Arthroplasty", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_knee_arthro" },
+    { file = "2025-12-py2025-mif-ebcm-l-fusion.pdf", title = "2025 Performance Year Cost Measure Information Forms — Lumbar Spine Fusion for Degenerative Disease, 1-3 Levels", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_l_fusion" },
+    { file = "2025-12-py2025-mif-ebcm-lgi-bleed.pdf", title = "2025 Performance Year Cost Measure Information Forms — Lower Gastrointestinal Hemorrhage", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_lgi_bleed" },
+    { file = "2025-12-py2025-mif-ebcm-low-back.pdf", title = "2025 Performance Year Cost Measure Information Forms — Low Back Pain", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_low_back" },
+    { file = "2025-12-py2025-mif-ebcm-lump-mast.pdf", title = "2025 Performance Year Cost Measure Information Forms — Lumpectomy, Partial Mastectomy, Simple Mastectomy", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_lump_mast" },
+    { file = "2025-12-py2025-mif-ebcm-mel-rsct.pdf", title = "2025 Performance Year Cost Measure Information Forms — Melanoma Resection", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_mel_rsct" },
+    { file = "2025-12-py2025-mif-ebcm-ne-cabg.pdf", title = "2025 Performance Year Cost Measure Information Forms — Non-Emergent Coronary Artery Bypass Graft (CABG)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_ne_cabg" },
+    { file = "2025-12-py2025-mif-ebcm-op-pci.pdf", title = "2025 Performance Year Cost Measure Information Forms — Elective Outpatient Percutaneous Coronary Intervention (PCI)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_op_pci" },
+    { file = "2025-12-py2025-mif-ebcm-prost-ca.pdf", title = "2025 Performance Year Cost Measure Information Forms — Prostate Cancer", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_prost_ca" },
+    { file = "2025-12-py2025-mif-ebcm-psych.pdf", title = "2025 Performance Year Cost Measure Information Forms — Psychoses and Related Conditions", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_psych" },
+    { file = "2025-12-py2025-mif-ebcm-resp-infxn.pdf", title = "2025 Performance Year Cost Measure Information Forms — Respiratory Infection Hospitalization", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_resp_infxn" },
+    { file = "2025-12-py2025-mif-ebcm-rheum-arth.pdf", title = "2025 Performance Year Cost Measure Information Forms — Rheumatoid Arthritis", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_rheum_arth" },
+    { file = "2025-12-py2025-mif-ebcm-rleccli.pdf", title = "2025 Performance Year Cost Measure Information Forms — Revascularization for Lower Extremity Chronic Critical Limb Ischemia", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_rleccli" },
+    { file = "2025-12-py2025-mif-ebcm-rn-stone.pdf", title = "2025 Performance Year Cost Measure Information Forms — Renal or Ureteral Stone Surgical Treatment", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_rn_stone" },
+    { file = "2025-12-py2025-mif-ebcm-sepsis.pdf", title = "2025 Performance Year Cost Measure Information Forms — Sepsis", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_sepsis" },
+    { file = "2025-12-py2025-mif-ebcm-ss-clnscpy.pdf", title = "2025 Performance Year Cost Measure Information Forms — Screening/Surveillance Colonoscopy", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_ebcm_ss_clnscpy" },
+    { file = "2025-12-py2025-mif-mspb-clinician.pdf", title = "2025 Performance Year Cost Measure Information Forms — Medicare Spending Per Beneficiary (MSPB) Clinician", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_mspb_clinician" },
+    { file = "2025-12-py2025-mif-tpcc.pdf", title = "2025 Performance Year Cost Measure Information Forms — Total Per Capita Cost (TPCC)", collection_path = "qpp_cm.2025_cost_measure_information_forms.2025_12_py2025_mif_tpcc" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/qpp_cm/2025/2025-cost-measure-information-forms/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/qpp_cm/2025/2025-cost-measure-information-forms/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Quality Payment Program (QPP) cost-measure reference data — Cost Measure Information Form (MIF) documents, the consolidated source Excel workbooks, and structured per-measure lookup tables (codes, attribution, exclusions, service assignment, risk adjustment, triggers)"
+document_table_comment = "One row per ingested MIF (Cost Measure Information Form) PDF, keyed by collection_path (ltree); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each MIF document — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering narrative text"

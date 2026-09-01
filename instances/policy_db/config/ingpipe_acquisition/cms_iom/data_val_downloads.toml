@@ -1,0 +1,19 @@
+# Download-validation configuration for the cms_iom corpus.
+#
+# Usage: uv run data-val-downloads \
+#            --config instances/policy_db/config/ingpipe_acquisition/cms_iom/data_val_downloads.toml
+#
+# Replaces data_val_downloaded_pdfs.py, which passed any manual folder holding
+# at least ONE PDF -- so a manual with 1 of 40 chapters passed -- and whose
+# size check only rejected zero bytes, which a truncated file satisfies. The
+# check now runs against the manifest the acquisition run wrote: every chapter
+# it resolved must be present at the byte size it recorded, and any target the
+# run recorded as failed fails validation.
+
+# The same output root the acquisition config writes to, so this reads the
+# manifest that run produced. Update alongside the acquisition config when the
+# snapshot date changes.
+output_dir = "data/input/cms_iom/2026-06-11"
+
+[content_checks]
+".pdf" = "pdf"

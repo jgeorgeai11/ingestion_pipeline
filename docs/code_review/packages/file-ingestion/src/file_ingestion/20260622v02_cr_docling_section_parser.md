@@ -1,0 +1,47 @@
+---
+name: cr-docling_section_parser
+goal: Address code quality issues identified in code/file_ingestion/docling_section_parser.py to align with python-development skills.
+created: 2026-06-22 14:00:00
+updated: 2026-06-22 14:00:00
+---
+
+## Implementation Plan
+
+1. [pending] No-silent-loss guard scope — `code/file_ingestion/docling_section_parser.py`
+   - 1.1. [suggestion] Lines 310-316: The fall-through guard tests only the `text` attribute (`snippet = (getattr(item, "text", "") or "").strip()`) to decide whether an unhandled element carries content. Docling can model graph/form content on items that hold their text in non-`text` attributes (e.g. `KeyValueItem` graph cells, `FormItem`), which `iterate_items` may emit into the body walk. Such an item would have an empty `getattr(item, "text", "")`, be classified "text-less," and be skipped silently — the single hole in the otherwise airtight no-silent-loss promise. Today's ingestion targets (Word/Excel/PDF prose) are unlikely to surface these, so the risk is low and may be unreachable in practice. Consider either documenting the `text`-only scope as a known limitation of the guard, or broadening the snippet check to cover the non-`text` content carriers Docling can emit.
+        - Current: `snippet = (getattr(item, "text", "") or "").strip()`
+        - Expected (optional): note in the module/function docstring that the guard's content test is `text`-only (so a non-`text` content carrier would be treated as benign), OR extend the snippet probe to the relevant non-`text` attributes.
+
+2. [pending] Logging consistency at the two new raise sites — `code/file_ingestion/docling_section_parser.py`
+   - 2.1. [suggestion] Lines 247-251 (missing-origin) and 312-316 (unhandled-element) raise `ValueError` without a preceding `logger.error`, unlike the malformed-JSON paths (lines 232, 237) which log before raising. This is defensible and arguably preferable: the sole caller (`ingest.py` `step_clean`, line 423) already logs `Clean failed for {file}: {e}` on these `ValueError`s, and the logging skill warns against duplicate logging. Flagging only as a consistency note — if the load-path `logger.error` calls are considered the house style, the two new raise sites diverge from it; if the no-duplicate-logging rule is the priority, the load path is the outlier. No change required.
+
+## Skills with No Issues
+
+1. Type Hints: No issues found. All functions and `_SectionBuilder` methods are fully annotated with modern syntax. The new contract is correct end-to-end: `parse_docling_json` is `-> tuple[list[Section], int]` (line 194), `sections_to_record(sections: list[Section], binary_hash: int) -> dict[str, Any]` (line 324), and the internal `_flush` / builder signatures are unchanged and annotated.
+2. Docstrings: No issues found. Module docstring documents the fail-fast guard with its text-bearing-vs-text-less distinction (lines 26-29) and the `origin.binary_hash` provenance (lines 33-37). `parse_docling_json` Returns now describes the `(sections, binary_hash)` tuple with the uint64 semantics and the downstream empty-list rejection (lines 209-216); its Raises documents the missing-origin path and the text-bearing-unhandled fail-fast (lines 218-226). `sections_to_record` Returns describes the new `{document: {n_parsed_sections, binary_hash}, sections}` envelope (lines 333-339). Google-style throughout.
+3. Comments: No issues found. Comments explain the "why": the provenance read-from-loaded-doc rationale and decoupling intent (lines 240-244), the pre-heading builder (lines 253-255), the blank-grid table caption symmetry (lines 187-189), the word_count table-markdown note (lines 136-139), and the fall-through guard intent (lines 306-309). No restating of code.
+4. Logging: No issues found beyond the consistency suggestion (2.1). Uses `logconfig.get_logger`; no `print`; f-strings throughout; ERROR on the load-failure branches and a single INFO success summary with section count and filename (line 320); no entry/exit noise. Module docstring states the caller owns logging setup (line 39).
+5. Exception Handling: No issues found. `except OSError: ... raise` propagates IO failures unchanged (matches `Raises: OSError`); the subsequent `except Exception ... raise ValueError(...) from e` is deliberate, documented, chained, and not re-raised as generic `Exception`. The two new `raise ValueError` paths (missing-origin, unhandled-element) are specific domain errors with full context (file name, type/label, text snippet) and match the documented `Raises:`. No bare except, no swallowed errors. Fail-fast is correctly applied at the guard.
+6. Executable Scripts: N/A — library module with no `__main__` / TOML entry point; the module docstring explicitly states the caller owns logging setup.
+7. Data Validation: N/A — deterministic transformer, not a `data_val_*` script. Schema enforcement (zero-section, count, sort_order, word_count) lives in `cleaned_models.py`.
+8. Unit Tests: N/A — reviewed file is module source; its test file is reviewed separately.
+9. SQL best-practices / dbt: N/A — no SQL in this file.
+
+## Status & Next Steps
+
+**Current Status**: Complete — review of the current whole file. The new changes are correct and the cleaner stays generic (all branching keys on Docling labels/`isinstance`, never on document content). Two [suggestion]-level notes; no [critical]/[major]/[minor] findings; no regression versus the v01-resolved items.
+**Completed**:
+1. Reviewed against all python-development core skills and the SQL skill (N/A).
+2. **Unhandled-element guard correctness** — Verified the guard (lines 306-316) fires ONLY for genuinely-unhandled text-bearing items, not the intentional drops: furniture/caption labels `continue` at line 267, `TableItem`/`PictureItem` at 270-282, blank headings at 287, and every `TextItem` (including empty-text) `continue`s at 298-304 before the guard. The guard is therefore reached only by non-Text/Table/Picture items; a text-less such item (e.g. a `GroupItem` container) is skipped, and a text-bearing one raises. Correct.
+3. **Provenance extraction and missing-origin path** — `origin = getattr(doc, "origin", None)` then `binary_hash = getattr(origin, "binary_hash", None) if origin is not None else None`, raising `ValueError` when `binary_hash is None` (lines 245-251). Uses an explicit `is None` check (not a falsy check), so a legitimate `binary_hash == 0` passes — matching `Document.binary_hash = Field(ge=0)` in `cleaned_models.py:121`. No source-file re-read; read from the already-loaded `DoclingDocument`, consistent with the decoupling intent in the docstring. Correct.
+4. **Return-tuple contract and callers match** — `parse_docling_json` returns `(sections, binary_hash)` (line 321). The sole production caller `ingest.py:406` unpacks `sections, binary_hash = parse_docling_json(...)` and threads the hash into `sections_to_record(sections, binary_hash)` at line 414; the test suite mocks the tuple form (`return_value=(["sec1", "sec2"], 42)` etc. in `test_ingest.py`). No mismatch.
+5. **Record envelope construction** — `sections_to_record` builds `CleanedDocument(document=Document(n_parsed_sections=len(sections), binary_hash=binary_hash), sections=sections)` and `model_dump()`s it (lines 347-351). This matches the `{document: {n_parsed_sections, binary_hash}, sections}` shape defined in `cleaned_models.py` (lines 124-144). `n_parsed_sections == len(sections)` by construction, so the `CleanedDocument` count invariant (`cleaned_models.py:161`) cannot fail from here; the zero-section invariant (`cleaned_models.py:166-167`) is the documented `pydantic.ValidationError` trigger when `sections == []`, correctly listed in the `Raises:` (lines 343-345) — though in practice `ingest.py:411-412` rejects an empty list before calling this function.
+6. **Generic, label-driven cleaning** — Confirmed all rules key on Docling labels (`FURNITURE_LABELS`, `HEADING_LABELS`, `DROP_LABELS`) or structural `isinstance` checks (`TableItem`, `PictureItem`, `TextItem`); no document-specific content assumptions. The blank-grid-with-caption preservation in `_table_to_markdown` (line 190, a v01 fix) remains.
+7. **No v01 regression** — All four v01-resolved items are intact in the current file: 1.1 empty-result note in `parse_docling_json` Returns (lines 213-216); 1.2 empty-list trigger in `sections_to_record` Raises (lines 343-345); 2.1 blank-grid table caption preservation (line 190 with the symmetry comment 187-189); 3.1 word_count table-markdown note (lines 136-139). None reverted.
+**Next Steps**:
+1. Optionally address the two suggestions (1.1 guard scope, 2.1 logging consistency); neither blocks.
+**Blockers**:
+1. None.
+**Notes**:
+1. Edge cases verified: `binary_hash == 0` accepted (explicit `is None` check); missing `origin` and missing `binary_hash` both raise the missing-origin `ValueError`; text-less unhandled container skipped; text-bearing unhandled item raises with a truncated `:80` snippet for diagnostics; empty section list returned then rejected at the caller / `CleanedDocument`; items without `prov` yield `page_start`/`page_end` None via `_page_nos`; blank heading skipped as furniture; heading-only section kept with `content_text=None`.
+2. The guard's snippet truncation `snippet[:80]` in the error message is a sensible bound on log/exception size; full content is not needed to identify the offending element type/label.

@@ -1,0 +1,46 @@
+# Configuration for the acquisition engine, cms_iom source.
+#
+# Usage: uv run download-cms-iom \
+#            --config instances/policy_db/config/ingpipe_acquisition/cms_iom/download_cms_iom.toml
+#
+# cms_iom is the source that genuinely needs code: its targets cannot be
+# computed from a pattern, only FOUND by scraping the IOMs index, following
+# each manual page, and reading the index table for each manual's folder name.
+# That discoverer lives in policy_db_acquisition/cms_iom/discover.py; the
+# console script is a three-line wrapper around ingpipe_acquisition.runner:main.
+
+# The dated snapshot directory. Authored here rather than derived from
+# date.today() at run time, which is what let a re-download silently write a
+# new folder that none of the 21 ingpipe_file_ingestion configs pointed at. A refresh
+# means editing this value AND the source/parsed/cleaned dirs in those 21
+# configs -- a recorded coupling, not a solved one.
+output_dir = "data/input/cms_iom/2026-06-11"
+
+# 21 manuals are published today. A CMS markup change that broke the link
+# pattern previously logged "Found 0 manual page links" at INFO and exited 0;
+# this floor makes it a failure. The value counts TARGETS (chapter PDFs), so it
+# is set well below the real total (~700) but far above what a broken pattern
+# would yield.
+min_targets = 100
+
+request_delay_seconds = 1.0
+dry_run = false
+overwrite = false
+
+[http]
+retries = 3
+backoff_factor = 0.5
+timeout = 120.0
+
+[discovery]
+# No `kind`: the discoverer is supplied in code, so these keys are read by
+# policy_db_acquisition.cms_iom.discover rather than by the engine.
+base_url = "https://www.cms.gov"
+index_path = "/medicare/regulations-guidance/manuals/internet-only-manuals-ioms"
+
+# Case-insensitive substrings that disqualify a scraped PDF URL.
+exclude_patterns = ["crosswalk", "xref"]
+
+# Filter to specific manuals by key (e.g. ["100-02", "100-04"]). An empty list
+# acquires every manual on the index.
+manuals = []

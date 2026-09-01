@@ -1,0 +1,87 @@
+---
+name: align-excel-schema-with-file-ingestion
+goal: Rework the just-built unified Excel module (`code/excel_ingestion/`, committed in 95c8516) so its storage schema is consistent with `file_ingestion` wherever the two are analogous. Adopt a single `collection_path ltree` identity (derived-or-authored), rename the consolidated tables to `sheet`/`sheet_content`, add a per-sheet source hash + the CHECK-constraint defense-in-depth file_ingestion has, give the structured tables an FK+cascade to `sheet`, and switch `row_text` to plain newline key-value. Re-ingest qpp_cm to prove the reworked schema. The consolidated semantic leg and the structured SQL leg are unchanged in concept — this is a schema-consistency pass only.
+created: 2026-06-24 13:06:55
+updated: 2026-06-24 14:05:00
+---
+
+## Implementation Plan
+
+This reworks the existing module (tasks ordered foundational-first). `excel_parser.py` and its tests are UNCHANGED (the parser produces rows from explicit bounds; collection_path / hash / row_text are orchestrator concerns).
+
+1. [completed] collection_path + source-hash utilities - `code/excel_ingestion/_utils.py`
+   - 1.1. `make_collection_path(filename, sheet, override=None) -> str`: if `override` is given, VALIDATE it as a lowercase `ltree` (reuse `file_ingestion/_utils.validate_collection_path` — do not add a copy) and raise on invalid (file_ingestion's validate-not-sanitize rule). Else DERIVE it: `<sanitize(filename stem)>.<sanitize(sheet)>` where `sanitize` = lowercase, non-`[a-z0-9_]` runs -> `_`, strip leading/trailing `_` (ltree labels permit a leading digit, so no prefix needed). Two labels, dot-joined.
+   - 1.2. `compute_source_hash(row_texts: list[str]) -> int`: low 64 bits of `sha256` over the ordered `row_text` values joined by `\n` (`int(sha256(...).hexdigest(), 16) & 0xFFFFFFFFFFFFFFFF`) — the per-sheet content fingerprint stored as `source_binary_hash` (same format as file_ingestion). Any header/value change flips it.
+   - 1.3. Keep the existing `get_engine`, `normalize_column_name`, `deduplicate_columns`, logging helpers.
+
+2. [completed] Tests for the utilities - `code/excel_ingestion/unit_tests/test_utils.py`
+   - 2.1. Cover: derive (`"2025-codes-list-aki.xlsx"`,`"Triggers"` -> `2025_codes_list_aki.triggers`; spaces/caps/punct sanitized; leading-digit label allowed); override path (valid ltree passes, invalid raises); `compute_source_hash` is deterministic, in `[0, 2^64)`, and changes when a row_text changes. Keep the existing util tests green. Run `uv run pytest code/excel_ingestion/unit_tests/test_utils.py`.
+
+3. [completed] Rename + rework the consolidated schema - `code/excel_ingestion/sql/excel_schema.sql`
+   - 3.1. Add `create extension if not exists ltree;` and `create schema if not exists {schema_name};` at the top (excel now uses ltree; this also moves schema creation into the template, matching file_ingestion — drop the in-code `create schema` in `ingest_excel.py`).
+   - 3.2. Parent table `{sheet_table}` (default name `sheet`): `collection_path ltree primary key`, `title text not null`, `n_rows integer not null check (n_rows >= 1)`, `source_binary_hash numeric(20,0) not null check (source_binary_hash >= 0 and source_binary_hash < 18446744073709551616)`, `structured_table text` (nullable; the structured table this sheet also feeds — renamed from `table_name`), `ingested_at timestamptz not null default now()`.
+   - 3.3. Content table `{content_table}` (default name `sheet_content`): `collection_path ltree not null references {schema_name}.{sheet_table}(collection_path) on delete cascade`, `sort_order integer not null check (sort_order >= 1)`, `row_text text not null check (row_text <> '')`, `word_count integer not null check (word_count >= 0)`, `primary key (collection_path, sort_order)`.
+   - 3.4. Update the placeholder name `{excel_table}` -> `{sheet_table}` and its substitution in `ingest_excel` (the `ensure_consolidated_tables` step that renders this template). Keep `if not exists`.
+
+4. [completed] Rework the structured-table engine - `code/excel_ingestion/structured_table.py`
+   - 4.1. Identity columns become a single `collection_path ltree not null` (replacing `source_file` + `sheet_name`); the ordinal `row_number` -> `sort_order integer not null check (sort_order >= 1)`; PK `(collection_path, sort_order)`. DROP the per-row `ingested_at` (defer to the parent `sheet.ingested_at`).
+   - 4.2. Add a foreign key `collection_path references {schema}.{sheet_table}(collection_path) on delete cascade` (every sheet is embedded, so every structured row's collection_path exists in `sheet`). The engine now needs the parent `sheet`-table name — thread it in from the orchestrator (it knows the configured parent name) so `ensure_table` can build the FK. Create with `create table if not exists` (replace the current check-then-create `create table`).
+   - 4.3. `reconcile_columns` (the `col_*` overlap guard) is unchanged. `write_rows` keys on `collection_path` (not `source_file`/`sheet_name`); overwrite/skip is by `collection_path`. (With the FK cascade, deleting a sheet's `sheet` row also clears its structured rows — the orchestrator drives the lifecycle via the `sheet` row; the structured leg no longer needs an independent delete-by-source, though a defensive `delete where collection_path = :cp` on overwrite is fine.)
+
+5. [completed] Tests for the structured-table engine - `code/excel_ingestion/unit_tests/test_structured_table.py`
+   - 5.1. Update to the new identity (`collection_path`/`sort_order`, no `ingested_at`) and the FK. Use a real ephemeral test schema (the existing `ephemeral_schema` fixture) — create a parent `sheet` table first so the FK resolves. Cover: create-on-first-write; same-shape append; superset (ADD COLUMN + warn); subset (NULL); the overlap guard raising on near-disjoint; overwrite/skip by collection_path; and that deleting the parent `sheet` row cascades the structured rows. Run the file.
+
+6. [completed] Rework the orchestrator - `code/excel_ingestion/ingest_excel.py`
+   - 6.1. Per sheet: resolve `collection_path` via `make_collection_path(filename, sheet, override=cfg.get("collection_path"))`; resolve `title` = `cfg.get("title", sheet)`; build each row's `row_text` as PLAIN NEWLINE KV (`"col: value"` per line, joined by `\n` — replace the `||` join); compute `n_rows` and the per-sheet `source_binary_hash` via `compute_source_hash(row_texts)`.
+   - 6.2. Write the `sheet` row (`collection_path, title, n_rows, source_binary_hash, structured_table, ingested_at`) + `sheet_content` rows (keyed by `collection_path`); if the sheet names a `table`, also `structured_table.write_rows(...)` keyed by `collection_path`. Overwrite/skip semantics now key on `collection_path`: on overwrite delete the `sheet` row (cascade clears `sheet_content` + structured) then re-insert; on skip-if-present check the `sheet` row. One transaction per sheet per leg. Keep the resilient accumulate-and-report.
+   - 6.3. Config validation: `sheet`/`header_row`/`data_start_row`/`data_end_row` required; `table`/`title`/`collection_path` optional. Validate an authored `collection_path` (via `make_collection_path`'s validate path) and the derived one. Remove the in-code `create schema` (now in the template, task 3.1).
+
+7. [completed] Tests for the orchestrator - `code/excel_ingestion/unit_tests/test_ingest_excel.py`
+   - 7.1. Update for: derived vs authored `collection_path`; `title` default vs override; newline-KV `row_text`; `source_binary_hash` stored on `sheet`; `structured_table` column; overwrite/skip by collection_path (incl. that overwriting a sheet clears both legs via cascade); the new required/optional config fields. Keep the resilient mixed-batch + non-zero-exit tests. Run the full `code/excel_ingestion/unit_tests/` suite.
+
+8. [completed] Update + run the output validator - `code/excel_ingestion/data_validation/data_val_excel_outputs.py`
+   - 8.1. Update for the new schema. `sheet_content`: FK/cascade intact, `row_text` non-empty, `word_count >= 0`, contiguous `sort_order` per `collection_path`. `sheet`: `source_binary_hash` non-null and in `[0, 2^64)`; `n_rows` equals the actual `sheet_content` count per `collection_path`. Structured tables: exist, have rows, non-null `collection_path`/`sort_order`, every configured source `collection_path` present, and the FK to `sheet` is satisfied (no orphan structured rows). Accumulate failures, exit 1 if any.
+
+9. [completed] Update the input validator - `code/excel_ingestion/data_validation/data_val_excel_inputs.py`
+   - 9.1. Files/sheets exist + parse yields >=1 col/row (unchanged), plus: if a sheet config supplies `collection_path`, validate it is a valid lowercase ltree (fail fast on a bad authored path before the run).
+
+10. [completed] Update the example config - `code/excel_ingestion/config/example.toml`
+   - 10.1. Reflect the new defaults/fields: table-name defaults `sheet`/`sheet_content`; per-sheet optional `title` and `collection_path` (with their defaults documented); note `row_text` is newline key-value and `source_binary_hash` is a per-sheet content hash. Keep it a reference, not runnable.
+
+11. [completed] Re-ingest qpp_cm + validate + spot-check (proving run) - `code/excel_ingestion/config/qpp_cm/ingest_qpp_cm_2026.toml`
+   - 11.1. DROP the existing `qpp_cm` schema (it holds the OLD structure: `filename`/`sheet_name`, `row_number`, no hash, no CHECKs, table `excel`/`excel_content`). The qpp_cm config itself is essentially UNCHANGED (collection_path derives, title defaults) except the `emergency` -> `triggers_emergency` `table` override, which stays.
+   - 11.2. Re-run `uv run code/excel_ingestion/ingest_excel.py --config code/excel_ingestion/config/qpp_cm/ingest_qpp_cm_2026.toml` against the reworked module; exit 0, resilient summary.
+   - 11.3. Run both validators (tasks 8, 9). Spot-check: `collection_path` is the derived `<workbook>.<sheet>`; `sheet.source_binary_hash` is populated per sheet; a measure's rows are in BOTH `sheet_content` AND its structured table; cross-workbook accumulation into a shared structured table works with the FK to `sheet` (no orphans); deleting one `sheet` row cascades to both legs. Leave the DB populated for review.
+
+## Key Data Decisions and Considerations
+
+1. The goal is schema CONSISTENCY with `file_ingestion` wherever analogous (it is a multi-corpus RAG; a uniform identity + storage shape across modules simplifies the embedding/MCP/retrieval/citation layer). The consolidated semantic leg and the structured SQL leg are unchanged in concept.
+2. Single identity: `collection_path ltree` everywhere (parent, content, structured), replacing `(filename, sheet_name)` and the structured `(source_file, sheet_name, row_number)`. This matches `document`/`document_content` and lets the embedding tables key the same way. Default `collection_path` is DERIVED + sanitized from `<filename stem>.<sheet>` (excel's names are given by the data, so sanitizing is appropriate — same as it already does for table/column names); an authored override is VALIDATED, not sanitized (file_ingestion's rule). One helper does both.
+3. Table names: parent `sheet` + content `sheet_content` (the unit is a sheet), paralleling `document`/`document_content` (unit + its content) rather than naming by format. These are config defaults (placeholders), so settable per config.
+4. Per-sheet source hash: `source_binary_hash numeric(20,0)` on `sheet` = low-64 `sha256` of the sheet's ordered `row_text` values — the per-sheet change-detection fingerprint, same column name/format/CHECK as file_ingestion. Per-SHEET (not per-file) is the right granularity (a sheet is excel's ingestion unit; a monthly re-pull can detect exactly which sheets changed). The name `source_binary_hash` is kept for cross-module consistency even though excel computes it from text (the "binary" is a slight misnomer, accepted for naming consistency).
+5. `row_text` = PLAIN NEWLINE key-value (`col: value` per line). Research on row serialization for RAG: keep column names with values (gives the embedding semantic context; bare-value/CSV are weakest) but use newline markdown-KV (the top-performing, token-efficient, LLM-familiar format) rather than the arbitrary `||` separator. Natural-language verbalization retrieves slightly better but needs per-column templates — not feasible for a generic tool. Table/sheet context is added at EMBED time via the embedding module's `header_columns`, not baked into every row.
+6. CHECK-constraint defense-in-depth (matching file_ingestion): `n_rows >= 1`, `source_binary_hash` in `[0, 2^64)`, `sort_order >= 1`, `word_count >= 0`, `row_text <> ''`. Excel had none.
+7. Structured tables FK `collection_path -> sheet(collection_path) on delete cascade` (supersedes the old "no parent FK", which was decided under the synthetic key). Because every sheet is embedded, every structured row's collection_path exists in `sheet`, so the FK is always satisfiable, gives referential integrity, and unifies the lifecycle: overwriting a sheet (delete its `sheet` row) cascades to BOTH `sheet_content` and its structured rows. The per-row `ingested_at` is dropped from structured tables (defer to `sheet.ingested_at`), matching `document_content`/`sheet_content`.
+8. `create extension if not exists ltree` + `create schema if not exists` move into the SQL template (excel now needs ltree), matching file_ingestion; the in-code `create schema` is removed.
+9. qpp_cm re-ingest: the existing `qpp_cm` schema holds the OLD structure, so it is dropped and re-loaded fresh by the reworked module. The qpp_cm config barely changes (collection_path derives, title defaults); the `emergency` -> `triggers_emergency` `table` override is preserved. Cheap (no embedding in this step). The structured tables are re-created with the FK to `sheet`.
+10. Scope: this is a follow-on consistency pass over the module built in 95c8516; `excel_parser.py` is unchanged. Embeddings for `sheet_content`, and `pg_metadata` for the `qpp_cm.*` tables, remain separate follow-ups.
+
+## Status & Next Steps
+
+**Current Status**: COMPLETE. All 11 tasks implemented; the 79-test suite is green; qpp_cm was re-ingested onto the new schema and validated end-to-end.
+**Completed**:
+1. Compared the two modules' schemas column-by-column; settled collection_path identity, `sheet`/`sheet_content` naming, per-sheet hash, newline-KV row_text, CHECKs, structured-table FK+cascade, and dropped structured `ingested_at`.
+2. Researched row serialization for RAG (key-value with column names + newline markdown-KV).
+3. Implemented all code + tests: `_utils` (make_collection_path/compute_source_hash), `excel_schema.sql` (sheet/sheet_content, ltree, CHECKs), `structured_table.py` (collection_path key + FK cascade + sort_order), `ingest_excel.py` (collection_path resolve, per-sheet hash, newline-KV, title, cascade lifecycle), both validators, example config. Suite: 79 passed.
+4. Re-ingested qpp_cm (dropped old schema): 37 tables (`sheet` + `sheet_content` + 35 structured), 326 sheet rows, 515,133 content rows, old `excel`/`excel_content` gone. Both validators exit 0. Spot-checks all pass: derived collection_path (`<workbook>.<sheet>`), per-sheet `source_binary_hash` in range, cross-workbook accumulation (`triggers` 233 rows / 22 paths), FK to `sheet` (0 orphans), both legs aligned, newline-KV `row_text`, and the `emergency` -> `triggers_emergency` override preserved (25 rows, 0 emergency rows in shared `triggers`).
+**Next Steps**:
+1. None for this activity. Follow-ups (separate): `pg_metadata` for the new `qpp_cm.*` tables; embeddings for `qpp_cm.sheet_content` (update the embedding config's table name first — Note 1).
+**Blockers**:
+1. None — qpp_cm workbooks are present; qpp_cm re-load is destructive only on derived data (the old qpp_cm schema), re-buildable from the source `.xlsx`.
+**Notes**:
+1. Downstream-reference audit for the `excel`/`excel_content` -> `sheet`/`sheet_content` rename (grep across `code/`): NO live breakage. The MCP server hardcodes no excel table names; no dropped identity column (`source_file`/`sheet_name`/`row_number`) is referenced downstream; `readme/architecture.md` only mentions Excel as a file format (Docling), not the tables. Stale references found, all dormant/out-of-scope:
+   - `code/embedding_generation/config/generate_embeddings_briefs.toml` (-> `excel_content`) and `code/pg_metadata/briefs_db/data_descriptions.sql` (-> `data.excel_content`): the briefs stream, which has no data AND whose `briefs_db` is not even reachable. Update when briefs is revived.
+   - `code/embedding_generation/config/generate_embeddings_qpp_cm.toml` targets `qpp_cm.document_content` (heading_text/content_text) — a PRE-EXISTING mis-configured stub (copied from the cms_iom config; qpp_cm never had `document_content`), wrong independently of this rename. To embed qpp_cm, it must be pointed at `qpp_cm.sheet_content` with `embed_columns = ["row_text"]`. Out of scope here.
+   - Historical docs (`docs/activities/excel-ingestion/consolidate-excel-ingestion.md`, `docs/code_review/excel_ingestion/`) name the old tables as an archival record of the prior build — superseded by this activity; left as-is.
+2. `pg_metadata` for the new `qpp_cm.*` tables is a follow-up.
+3. The `emergency` -> `triggers_emergency` config override is a hand edit on the qpp_cm config; it must persist across this rework (the config file is edited in place, not regenerated).

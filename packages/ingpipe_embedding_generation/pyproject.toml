@@ -1,0 +1,26 @@
+[project]
+name = "ingpipe-embedding-generation"
+version = "0.1.0"
+description = "Chunking and embedding generation over an ingested PostgreSQL corpus"
+requires-python = ">=3.13"
+dependencies = [
+    "ingpipe-lib",
+    "sentence-transformers>=5.2.2",
+    # torch is pinned to the 2.10 line so the embedding/reranker models and
+    # the already-embedded corpus are unaffected; see the workspace root
+    # pyproject.toml for the matching transformers<5 constraint.
+    "torch>=2.10,<2.11",
+    "sqlalchemy>=2.0.46",
+    "psycopg2-binary>=2.9.11",
+]
+
+[project.scripts]
+generate-embeddings = "ingpipe_embedding_generation.generate_embeddings:main"
+data-val-embeddings = "ingpipe_embedding_generation.data_validation.data_val_embeddings:main"
+
+[tool.uv.sources]
+ingpipe-lib = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

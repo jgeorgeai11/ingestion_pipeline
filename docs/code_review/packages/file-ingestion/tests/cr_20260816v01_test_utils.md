@@ -1,0 +1,82 @@
+---
+name: cr_20260816v01_test_utils
+goal: Address remaining naming, coverage, and typing gaps in code/file_ingestion/unit_tests/test_utils.py to align with the python-development unit-tests and type-hints skills, re-reviewed after the coverage build-out and the COMMENT ON override tests.
+created: 2026-08-16 19:29:01
+updated: 2026-08-17 09:44:03
+---
+
+## Implementation Plan
+
+1. [completed] Test function naming - `code/file_ingestion/unit_tests/test_utils.py`
+   - 1.1. [minor] Lines 139, 158, 169, 184, 199, 207, 217, 235, 246, 300, 314: Test names omit the function under test, contrary to the `test_<function>_<scenario>_<expected>` convention (unit-tests §2.2), relying on the enclosing class instead. The concrete cost is that names are not unique across the file — `test_trailing_newline_raises` is defined twice (lines 89 and 117), so `pytest -k test_trailing_newline_raises` selects both and a failure line in CI output does not identify which validator broke. The 2026-06-22 review explicitly asked new tests to keep naming the function.
+        - Current: `def test_renders_all_placeholders(self, tmp_path: Path) -> None:` / `def test_trailing_newline_raises(self) -> None:` (twice)
+        - Expected: `def test_ensure_schema_renders_all_placeholders(...)`, `def test_validate_collection_path_trailing_newline_raises(...)`, `def test_validate_sql_identifier_trailing_newline_raises(...)`
+        - Resolution: Implemented as specified, extended beyond the cited lines — every test in the file now names its function under test, not just the ones listed. Rationale for the wider scope: the Expected already reached outside the listed lines (the two `test_trailing_newline_raises` definitions), and leaving the remaining validator tests (`test_uppercase_raises`, `test_dash_raises`, ...) unprefixed would keep the same ambiguity the finding objects to while making the file internally inconsistent. Concretely: the 14 `TestValidateCollectionPath` tests take a `test_validate_collection_path_*` prefix, the 4 `TestValidateSqlIdentifier` tests `test_validate_sql_identifier_*`, and every test in `TestEnsureSchema` / `TestEnsureSchemaComments` `test_ensure_schema_*`. Verified all 30 test-function names in the file are unique (42 collected cases after parametrization) and `pytest -k test_validate_collection_path_trailing_newline_raises` now selects exactly 1 test, 41 deselected.
+
+2. [completed] Remaining coverage gaps in `ensure_schema` - `code/file_ingestion/unit_tests/test_utils.py`
+   - 2.1. [minor] Line 226 (end of `TestEnsureSchema`): The `OSError` read-failure branch of `ensure_schema` (`_utils.py` lines 88-90) is the only uncovered path left in the module and is part of the documented `Raises:` contract, yet no test exercises it. The neighbouring failure branches (`FileNotFoundError`, `ValueError`, `SQLAlchemyError`) all have tests, so this is an isolated omission (unit-tests §7.1).
+        - Current: no test for a readable-path/unreadable-file failure
+        - Expected:
+          ```python
+          def test_ensure_schema_read_failure_propagates(self, tmp_path: Path, mocker) -> None:
+              """An OSError from reading the DDL propagates before any DB call."""
+              ddl = tmp_path / "schema.sql"
+              ddl.write_text("CREATE SCHEMA {schema_name};", encoding="utf-8")
+              mocker.patch.object(Path, "read_text", side_effect=OSError("boom"))
+              engine, _ = _make_mock_engine()
+
+              with pytest.raises(OSError, match="boom"):
+                  ensure_schema(engine, "rag", ddl)
+              engine.begin.assert_not_called()
+          ```
+        - Resolution: Implemented as specified, with the `mocker` parameter annotated `MockerFixture` (imported from `pytest_mock`, matching `test_ingest.py`) to satisfy the type-hints skill. Added as `test_ensure_schema_read_failure_propagates` at the end of `TestEnsureSchema`. With this test the module reaches 100% statement coverage: `uv run pytest code/file_ingestion/unit_tests/test_utils.py --cov=_utils --cov-report=term-missing` reports 41 statements, 0 missed.
+   - 2.2. [minor] Lines 207-215: `test_unsafe_identifier_raises_before_execution` only exercises a bad `db_schema`. The validation of `document_table` and `content_table` (`_utils.py` lines 77-78) is never asserted, so deleting either call — or validating the same argument twice — would leave the suite green while opening an injection path through a config-supplied table name.
+        - Current: `ensure_schema(engine, "bad-schema", ddl)` as the only rejection case
+        - Expected: parametrize the call over the three identifier arguments, e.g. `[("bad-schema", "doc", "doc_content"), ("rag", "Bad-Doc", "doc_content"), ("rag", "doc", "bad content")]`, each asserting `ValueError` and `engine.begin.assert_not_called()`
+        - Resolution: Implemented as specified — `test_ensure_schema_unsafe_identifier_raises_before_execution` is now parametrized over exactly those three tuples, each asserting `pytest.raises(ValueError, match="Unsafe SQL identifier")` and `engine.begin.assert_not_called()`, with a docstring noting that a config-supplied table name is an injection surface too. The related interpolation in the new shared `code/lib/sql_comments.build_comment_statements` (added for `cr_20260816v01__utils.md` 1.2) has its own identifier-rejection tests in `code/lib/unit_tests/test_sql_comments.py`.
+   - 2.3. [minor] Lines 235-244: `test_real_template_renders_table_comments` renders the shipped `sql/schema.sql` but asserts only ASCII substrings, so it does not pin the explicit `encoding="utf-8"` read in `_utils.ensure_schema` (its lines 85-87) that `sql/schema.sql` line 68 depends on for its em dash. Removing the encoding argument would mojibake the comment on a cp1252 default with every test still passing. See `cr_20260816v01__utils.md` (2.1) and `cr_20260816v01_schema.md` (4.1).
+        - Current: `assert "comment on table rag.doc_content is" in executed`
+        - Expected: add `assert "—" in executed  # the template's em dash survives the utf-8 read`
+        - Resolution: Implemented as specified — `assert "—" in executed` added to `test_ensure_schema_real_template_renders_table_comments`, with a comment stating that this is what pins `ensure_schema`'s explicit `encoding="utf-8"`. Verified the assertion actually guards the contract: this host's preferred encoding is cp1252 and a platform-default `read_text()` of `sql/schema.sql` does not preserve the character, so removing the `encoding` argument now fails this test. Paired findings implemented together: `cr_20260816v01__utils.md` 2.1, `cr_20260816v01_schema.md` 4.1 (where the wrapped literal keeps the em dash).
+
+3. [completed] Typing and fixture-file encoding - `code/file_ingestion/unit_tests/test_utils.py`
+   - 3.1. [minor] Line 301: The `kwargs` parameter is annotated as bare `dict`, which is not specific (type-hints §3). The parametrized values are all `dict[str, str]`.
+        - Current: `self, tmp_path: Path, kwargs: dict, expected_statement: str`
+        - Expected: `self, tmp_path: Path, kwargs: dict[str, str], expected_statement: str`
+        - Resolution: Implemented as specified — the parameter is now `kwargs: dict[str, str]`, which matches all three parametrized values.
+   - 3.2. [minor] Lines 141, 161, 172, 187, 210, 221, 255, 305, 317: Every `ddl.write_text(...)` omits `encoding`, so the fixture files are written in the platform default encoding while `ensure_schema` reads them as UTF-8. It works today only because all nine fixture strings are pure ASCII; the first non-ASCII fixture would fail or corrupt on a cp1252 host, and this file already passes non-ASCII comment text (line 260's em dash) through the same function, so the asymmetry is easy to trip over.
+        - Current: `ddl.write_text("CREATE SCHEMA {schema_name};")`
+        - Expected: `ddl.write_text("CREATE SCHEMA {schema_name};", encoding="utf-8")`
+        - Resolution: Implemented as specified — every `ddl.write_text(...)` in the file now passes `encoding="utf-8"`, so fixture files are written in the same encoding `ensure_schema` reads them with (10 call sites, including the one in the new OSError test from 2.1). Multi-line fixture strings were reflowed so the added keyword argument stays within the line-length limit.
+
+4. [completed] Repo test tooling and optional test-suite polish - `code/file_ingestion/unit_tests/test_utils.py`
+   - 4.1. [suggestion] Lines 142-144, 161, 172-174, 187-191, 210, 221: The inline DDL fixtures are written in uppercase SQL (`CREATE SCHEMA`, `CREATE TABLE`) while the project's SQL standard and the real `sql/schema.sql` are all lowercase, so the fixtures do not look like the artifact they stand in for.
+        - Current: `ddl.write_text("CREATE SCHEMA {schema_name};")`
+        - Expected: `ddl.write_text("create schema {schema_name};", encoding="utf-8")`
+        - Resolution: Deferred — cosmetic; these strings are never executed against a database and the assertions are case-insensitive or match only the substituted identifiers, so the mismatch cannot cause a false pass.
+   - 4.2. [suggestion] Lines 255, 305, 317: The identical one-line DDL template `"CREATE TABLE {schema_name}.{document_table} ({content_table} text);"` is repeated in three tests, and `_make_mock_engine()` is called in eleven. A `tmp_path`-based fixture returning `(ddl_path, engine, conn)` would remove the repetition (unit-tests §3.1).
+        - Current: each test writes its own template and builds its own mock engine
+        - Expected: a `comment_ddl` fixture (or a `conftest.py` helper) supplying the written template plus the mock engine/conn pair
+        - Resolution: Deferred — the duplication is three lines of literal setup and keeping it inline keeps each test's Arrange phase readable in isolation; the existing `_make_mock_engine` helper already removes the non-obvious part.
+   - 4.3. [minor] Whole file: `pytest --cov` (unit-tests §7.2) cannot be run in this environment — `pytest-cov` is neither installed in `.venv` nor declared in `pyproject.toml`, so `--cov=_utils` is rejected as an unrecognized argument. Coverage for this review was established by reading the module's branches rather than measured. Promoted from suggestion 2026-08-17 (re-rated to minor) as the repo-level home of the test-tooling fix: the README's documented command (`uv run pytest code`) also fails outright because `--import-mode=importlib` makes the repo-root `code/` directory shadow the stdlib `code` module, breaking pytest's debugging plugin via `import pdb` (recorded in `cr_20260816v01_test_generate_embeddings.md` 1.1 and `cr_20260816v01_test_ingest.md` 1.1), so unit-tests §7.2 is unsatisfiable repo-wide until both halves land.
+        - Current: `dependencies = [... "pytest>=9.0.2", "pytest-mock>=3.15.1", ...]`
+        - Expected: declare `pytest-cov` (e.g. `"pytest-cov>=7.0"`) in `pyproject.toml`, and add a root `conftest.py` that imports the stdlib `code` module (with a comment explaining why it exists) before pytest synthesises its namespace placeholder. Keep `--import-mode=importlib` — switching to `prepend` is not viable (verified 2026-08-17: a combined `uv run pytest code --import-mode=prepend` run aborts on the `test_utils.py` basename collision between `file_ingestion` and `excel_ingestion`, `import file mismatch`), while the root-conftest mechanism is pre-verified: with a scratch root `conftest.py` containing `import code`, the full `uv run pytest code` run passes (541 passed). Verify by running `uv run pytest code`.
+        - Resolution: Implemented, with one substantive deviation from the documented fix. (a) `pytest-cov>=7.0` is declared in `pyproject.toml` via `uv add` (installed `pytest-cov==7.1.0`, `coverage==7.15.4`; `uv.lock` updated), so unit-tests §7.2 is now runnable: `--cov=_utils` reports 41 statements / 0 missed for this module, and the new `code/lib/sql_comments.py` measures 100% as well. Note for the package-management skill: `pytest-cov` is not on the approved-packages list (nor is the already-present `pytest-mock`); it was added because the unit-tests skill itself mandates `pytest --cov`, and it is a pytest plugin rather than a new runtime dependency — flag if the list should be amended instead. (b) The root `conftest.py` was added but must import `pdb`, not `code`: importing the stdlib `code` module there is NOT sufficient, because pytest's importlib-mode importer explicitly re-imports a parent module that lacks `__path__` (`need_reimport` in `_pytest.pathlib._import_module_using_spec`) and so replaces `sys.modules["code"]` with a namespace module for the repo's `code/` directory regardless of what conftest bound first. Importing `pdb` at root-conftest time caches it while the stdlib `code` is still intact, which is what the debugging plugin's later `import pdb` needs. The docstring records that mechanism and why `--import-mode=importlib` stays. The earlier `import code` pre-verification only appeared to work because a whole-directory run imports the deep conftests after `pytest_configure`; the failure reproduces with a single-file target. Verified all three invocation shapes now pass: `uv run pytest code` → 556 passed, `uv run pytest code/file_ingestion/unit_tests/test_utils.py` → 42 passed (INTERNALERROR before this change), and `uv run pytest code/file_ingestion/unit_tests/test_utils.py code/lib` → 101 passed. The companion halves recorded in `cr_20260816v01_test_generate_embeddings.md` 1.1 and `cr_20260816v01_test_ingest.md` 1.1 are satisfied by this same root `conftest.py`.
+
+## Skills with No Issues
+
+1. unit-tests §1 (pytest, not unittest): No issues found. Pure pytest; `unittest.mock.MagicMock` is used only as a mocking primitive, which is the standard pytest-compatible choice.
+2. unit-tests §2.1 (file naming): No issues found. `test_utils.py` matches the module under test, `_utils.py`.
+3. unit-tests §2.2 (function naming): **Issue found** — see 1.1.
+4. unit-tests §3 / §3.2 (single behavior, Arrange-Act-Assert): No issues found. Every test has a clear three-phase shape and asserts one behavior; the comment-override tests assert a single statement sequence rather than unrelated facts.
+5. unit-tests §3.1 (fixtures): Minor opportunity only — see 4.2. `tmp_path` is used correctly throughout and `_make_mock_engine` is a well-documented, type-hinted helper.
+6. unit-tests §4 (mock external boundaries only): No issues found. Only the SQLAlchemy `Engine` — the true external boundary — is mocked; no real database, and the filesystem uses real `tmp_path` files rather than patched I/O.
+7. unit-tests §5.1 (parametrize): No issues found for the current tests. `TestValidateSqlIdentifier` and `test_single_override_issues_only_that_comment` use `@pytest.mark.parametrize` appropriately; finding 2.2 proposes extending it to the identifier-rejection case.
+8. unit-tests §5.2 (test exceptions with match): No issues found. Every `pytest.raises` binds a message — `"Invalid collection_path"`, `"Unsafe SQL identifier"`, `"Schema SQL template not found"`, `r"\{bogus\}"` — except `test_sqlalchemy_error_propagates` (line 224), where the exception type is the whole contract and the message is fabricated by the mock.
+9. unit-tests §5.3 (DataFrame comparison): N/A — no DataFrames in this module.
+10. unit-tests §6 (independence, no private-state assertions): No issues found. Tests share no mutable state, build their own `tmp_path` fixtures and mock engines, and assert only on public return values, raised exceptions, and recorded calls at the mocked boundary.
+11. unit-tests §7 / §7.1 (comprehensive coverage): Mostly satisfied — all three public functions of `_utils.py` are tested across happy paths, boundaries, and error conditions; the residual gaps are 2.1 and 2.2.
+12. unit-tests §7.2 (validate with pytest-cov): Could not be executed — see 4.3. The suite itself passes: 39 tests green.
+13. Docstrings: No issues found. Every test and both helpers carry a concise Google-style docstring stating the behavior asserted, and `_make_mock_engine` documents its `Returns:` tuple.
+14. Type Hints: **Issue found** — see 3.1. All other test signatures are fully annotated with `-> None` and typed parameters.
+15. Comments: No issues found. The comments on lines 54-55, 232-233, and 267 explain why (the sanitizer-vs-validator change, the deliberate use of the real template, the expected call count) rather than what.

@@ -1,0 +1,148 @@
+# =============================================================================
+# Excel ingestion — EXAMPLE config (all options, annotated)
+#
+# Storage model:
+#   - Every sheet is ALWAYS embedded into the shared `sheet`/`sheet_content`
+#     tables (the semantic / retrieval leg). There is no flag for this.
+#   - A sheet that names a `table` is ADDITIONALLY written to that structured
+#     SQL table (the SQL / text-to-SQL leg), created-or-appended with additive
+#     schema evolution. Omit `table` -> embed-only.
+#
+# Identity is `collection_path` (an ltree), one per sheet — matching the
+# ingpipe_file_ingestion document/document_content model. By default it is DERIVED from
+# the workbook + sheet name (sanitized: `<filename-stem>.<sheet>`); it can be
+# overridden per sheet (see `collection_path` below).
+#
+# Sheets are declared per workbook in a `sheets = [...]` list. Only `sheet` is
+# required; every other field has a sensible default (header on row 1, data from
+# the next row to the last non-empty row, columns A onward). The ingester does NO
+# header-anchor / stop-marker / skip-marker detection — bounds are explicit or
+# defaulted, never inferred from markers.
+#
+# Reference, not a runnable config. `# default:` marks the omitted value.
+# =============================================================================
+
+
+# ------------------------------------------------------------------ top level
+source_dir = "data/input/example_corpus/"    # REQUIRED. Dir holding the .xlsx files.
+db_name    = "example_db"                    # REQUIRED. Target Postgres database.
+db_schema  = "example_schema"                # REQUIRED. Target schema (created if absent).
+
+sheet_table   = "sheet"          # OPTIONAL  # default: "sheet"
+content_table = "sheet_content"  # OPTIONAL  # default: "sheet_content"
+                             #   Names of the consolidated (embedding-leg) tables: the sheet
+                             #   metadata table and its per-row content table (content FKs ->
+                             #   sheet ON DELETE CASCADE). Per-CONFIG, not per-sheet — the
+                             #   per-sheet `table` field below names the *structured* table.
+                             #   Override only to keep a separately-named consolidated store in
+                             #   the same schema, or for more descriptive names.
+
+overwrite          = false   # OPTIONAL  # default: false
+                             #   false -> skip a sheet (by collection_path) already loaded (idempotent).
+                             #   true  -> replace that sheet's rows (delete-by-collection_path + reinsert)
+                             #            on BOTH legs; deleting the `sheet` row cascades to both.
+
+collection_path_prefix = "example_schema.example_corpus"
+                             # OPTIONAL  # default: none
+                             #   An ltree path prepended to every DERIVED collection_path, so a
+                             #   set of workbooks sits under a schema-scoped branch of the tree:
+                             #   `2025_codes_list_aki.triggers` becomes
+                             #   `example_schema.example_corpus.2025_codes_list_aki.triggers`.
+                             #   PRECEDENCE: an authored per-sheet `collection_path` override is
+                             #   NEVER prefixed -- it already states the full identity. The prefix
+                             #   applies to derivation only.
+                             #   Why it exists: without it every derived path is a bare
+                             #   `<stem>.<leaf>`, so a schema-scoped corpus filter (`qpp_cm.%`)
+                             #   matches NO sheet and silently drops the whole leg from the
+                             #   query rather than reporting an error.
+                             #   Validated as an ltree at config load, so a bad prefix aborts
+                             #   once instead of failing per sheet -- and it must be set
+                             #   identically for `ingest-excel` and `data-val-excel-outputs`,
+                             #   which independently re-derive the same paths.
+                             #   CHANGING IT CHANGES EVERY SHEET'S IDENTITY: rows written under
+                             #   the old paths are not migrated, so a change is a re-ingest.
+
+min_column_overlap = 0.5     # OPTIONAL  # default: 0.5
+                             #   Structured-append guard: when a sheet appends to an EXISTING
+                             #   structured table, refuse if it shares < this fraction of its data
+                             #   columns with the table in BOTH directions (likely a wrong-table
+                             #   name). Legitimate growth/shrinkage is allowed and WARN-logged.
+
+# COMMENT ON descriptions (strings), applied at ingest AFTER the DDL template
+# and surfaced by the MCP server's list_schemas / list_tables. The template
+# already bakes GENERIC comments onto the consolidated pair; set these only to
+# override with corpus-flavored text. Applied on EVERY run (COMMENT ON
+# overwrites) — keep a corpus's text identical across its configs (last writer
+# wins). Omit a key (default: none) to leave the existing comment alone.
+schema_comment        = "Example corpus — what this schema holds"       # OPTIONAL
+sheet_table_comment   = "Catalog of ingested example worksheets ..."    # OPTIONAL
+content_table_comment = "Row-level text of the example worksheets ..."  # OPTIONAL
+
+
+# =============================================================================
+# Files. One [files."<filename>"] entry per workbook, each with a `sheets` list.
+# Per-sheet keys — only `sheet` is required; everything else defaults:
+#   sheet            REQUIRED  exact sheet/tab name
+#   header_row       OPTIONAL  1-based header row                  # default: 1
+#   data_start_row   OPTIONAL  first data row (1-based)            # default: header_row + 1
+#   data_end_row     OPTIONAL  last data row (1-based, inclusive)  # default: last non-empty
+#                              row in the span. BEST-EFFORT — it includes trailing footer /
+#                              marker rows (e.g. "End of worksheet"), so set it explicitly for
+#                              footer-bearing sheets (like qpp_cm).
+#   start_col        OPTIONAL  first column, Excel letter          # default: "A"
+#   end_col          OPTIONAL  last column, Excel letter (incl.)   # default: first blank header
+#   table            OPTIONAL  present -> also a structured table of this name (same name
+#                              across sheets/files -> rows ACCUMULATE into one shared table);
+#                              omit -> embed-only
+#   table_comment    OPTIONAL  COMMENT ON TABLE description for the structured `table`
+#                              (requires `table`); applied on EVERY write, so a re-run
+#                              refreshes it. Keep the text identical wherever the same
+#                              table is fed (last writer wins).       # default: none
+#   title            OPTIONAL  human-readable title on the `sheet` row
+#                              # default: "<workbook-stem> — <sheet>" (unambiguous when
+#                              # workbooks share a sheet name)
+#   collection_path  OPTIONAL  authored ltree identity (validated, not rewritten,
+#                              and never prefixed by `collection_path_prefix`)
+#                              # default: derived `<filename-stem>.<sheet>` (sanitized),
+#                              # with `collection_path_prefix` prepended when set
+#
+# Header rules: within the resolved column span every header must be present
+# (non-blank) and unique after normalization (no two map to the same col_* name),
+# or the sheet is REJECTED and recorded as a per-sheet failure — never silently
+# misaligned or collapsed.
+# =============================================================================
+
+
+# A config can list several [files."..."] entries. (A config targets ONE
+# db_name/db_schema, so different streams are separate config files.)
+[files."Example_Workbook.xlsx"]
+sheets = [
+    # minimal: header row 1, data row 2 to the last non-empty row, columns A onward
+    { sheet = "Sheet A", table = "sheet_a" },
+    # embed-only, with explicit row bounds
+    { sheet = "Sheet B", header_row = 1, data_start_row = 2, data_end_row = 15 },
+    # header not at row 1, data confined to columns B..F, explicit title + authored path
+    { sheet = "Sheet C", header_row = 6, data_start_row = 8, data_end_row = 23, start_col = "B", end_col = "F", table = "sheet_c", title = "Sheet C — Codes", collection_path = "data.example.sheet_c" },
+]
+
+# For workbooks whose layout isn't obvious by eye (e.g. qpp_cm: headers at row 5/6,
+# data ending at an "End of worksheet" marker with no blank gap), set the bounds
+# explicitly — auto data_end_row would otherwise include that footer. You produce
+# this config however is convenient (by hand, or a throwaway one-off script); the
+# module has NO generation code, it only consumes the config above.
+
+
+# =============================================================================
+# Naming / behavior (context, not config):
+#   - Identity is `collection_path` (ltree). `sheet`/`sheet_content` and every
+#     structured table are keyed on it (structured PK = collection_path + sort_order;
+#     structured tables FK -> sheet(collection_path) ON DELETE CASCADE).
+#   - Structured DATA columns are snake_cased + `col_`-prefixed
+#     ("CPT/HCPCS" -> col_cpt_hcpcs, "2021 Q1" -> col_2021_q1) so they are always
+#     unquoted-safe identifiers (no reserved-word / leading-digit issues).
+#   - sheet_content stores each row as newline key-value text over ORIGINAL headers:
+#     "Header A: value\nHeader B: value\n..." (the format research favours for tabular RAG).
+#   - The `sheet` row carries a per-sheet `source_binary_hash` (low-64 sha256 of the
+#     row_texts) for change detection, plus `title`, `n_rows`, and `structured_table`.
+#   - All structured data columns are text; numeric/date casting is a downstream view.
+# =============================================================================

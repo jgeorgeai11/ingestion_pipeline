@@ -1,0 +1,70 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/cms_iom/ingest_policy_pub_100_16.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "cms_iom"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/cms_iom/2026-06-11/pub_100_16_managed_care/"
+documents = [
+    { file = "mc86c01.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 1 - General Provisions", collection_path = "cms_iom.pub_100_16_managed_care.mc86c01" },
+    { file = "mc86c03.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 3 - Marketing Guides Instructions", collection_path = "cms_iom.pub_100_16_managed_care.mc86c03" },
+    { file = "mc86c04.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 4 - Benefits and Beneficiary Protections", collection_path = "cms_iom.pub_100_16_managed_care.mc86c04" },
+    { file = "mc86c05.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 5 - Quality Assessment", collection_path = "cms_iom.pub_100_16_managed_care.mc86c05" },
+    { file = "mc86c06.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 6 - Relationships With Providers", collection_path = "cms_iom.pub_100_16_managed_care.mc86c06" },
+    { file = "mc86c07.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 7 - Risk Adjustment", collection_path = "cms_iom.pub_100_16_managed_care.mc86c07" },
+    { file = "mc86c08.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 8 - Payments to Medicare Advantage Organizations", collection_path = "cms_iom.pub_100_16_managed_care.mc86c08" },
+    { file = "mc86c09.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 9 - Employer/Union Sponsored Group Health Plans", collection_path = "cms_iom.pub_100_16_managed_care.mc86c09" },
+    { file = "mc86c10.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 10 - MA Organization Compliance with State Law and Preemption by Federal Law", collection_path = "cms_iom.pub_100_16_managed_care.mc86c10" },
+    { file = "mc86c11.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 11 - Medicare Advantage Application Procedures and Contract Requirements", collection_path = "cms_iom.pub_100_16_managed_care.mc86c11" },
+    { file = "mc86c12.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 12 - Effect of Change of Ownership", collection_path = "cms_iom.pub_100_16_managed_care.mc86c12" },
+    { file = "mc86c13.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 13 - Medicare Managed Care Beneficiary Grievances, Organization Determinations, and Appeals", collection_path = "cms_iom.pub_100_16_managed_care.mc86c13" },
+    { file = "mc86c14.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 14 - Contract Determinations and Appeals", collection_path = "cms_iom.pub_100_16_managed_care.mc86c14" },
+    { file = "mc86c15.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 15 - Intermediate Sanctions", collection_path = "cms_iom.pub_100_16_managed_care.mc86c15" },
+    { file = "mc86c16a.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 16a - Private Fee-for-Service (PFFS) Plans", collection_path = "cms_iom.pub_100_16_managed_care.mc86c16a" },
+    { file = "mc86c16b.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 16b - Special Needs Plans", collection_path = "cms_iom.pub_100_16_managed_care.mc86c16b" },
+    { file = "mc86c17a.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 17a - TEFRA Cost Based Payment Processes and Principles", collection_path = "cms_iom.pub_100_16_managed_care.mc86c17a" },
+    { file = "mc86c17b.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 17b - Payment Principles for Cost-Based HMOs and CMPs", collection_path = "cms_iom.pub_100_16_managed_care.mc86c17b" },
+    { file = "mc86c17c.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 17c - Cost Apportionment for Cost-Based HMOs and CMPs", collection_path = "cms_iom.pub_100_16_managed_care.mc86c17c" },
+    { file = "mc86c17d.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 17d - Medicare Cost Plan Enrollment and Disenrollment Instructions", collection_path = "cms_iom.pub_100_16_managed_care.mc86c17d" },
+    { file = "mc86c17f.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 17f - Benefits and Beneficiary Protections", collection_path = "cms_iom.pub_100_16_managed_care.mc86c17f" },
+    { file = "mc86c18a.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 18a - Cost-Based Payment Process and Principles", collection_path = "cms_iom.pub_100_16_managed_care.mc86c18a" },
+    { file = "mc86c18b.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 18b - Payment Principles for Cost-Based HMOs and CMPs", collection_path = "cms_iom.pub_100_16_managed_care.mc86c18b" },
+    { file = "mc86c18c.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 18c - Cost Apportionment for Cost-Based HMO/CMPs", collection_path = "cms_iom.pub_100_16_managed_care.mc86c18c" },
+    { file = "mc86c21.pdf", title = "Pub. 100-16: Medicare Managed Care — Chapter 21 - Compliance Program Guidelines and Prescription Drug Benefit Manual Chapter 9", collection_path = "cms_iom.pub_100_16_managed_care.mc86c21" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/cms_iom/2026-06-11/pub_100_16_managed_care/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/cms_iom/2026-06-11/pub_100_16_managed_care/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Internet-Only Manuals — ingested policy documents stored as section-level text with hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested CMS IOM chapter document (PDF or .docx), keyed by collection_path (an ltree of <schema>.<manual folder>.<chapter>); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each CMS IOM chapter — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering manual text"

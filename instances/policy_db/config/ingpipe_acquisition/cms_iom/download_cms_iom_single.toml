@@ -1,0 +1,27 @@
+# Single-manual configuration for the acquisition engine, cms_iom source.
+#
+# Usage: uv run download-cms-iom \
+#            --config instances/policy_db/config/ingpipe_acquisition/cms_iom/download_cms_iom_single.toml
+#
+# Acquires one manual, for smoke-testing the lane end to end without pulling
+# the whole corpus.
+
+output_dir = "data/input/cms_iom/2026-06-11"
+
+# One manual, so the floor is per-config rather than corpus-wide.
+min_targets = 1
+
+request_delay_seconds = 1.0
+dry_run = false
+overwrite = false
+
+[http]
+retries = 3
+backoff_factor = 0.5
+timeout = 120.0
+
+[discovery]
+base_url = "https://www.cms.gov"
+index_path = "/medicare/regulations-guidance/manuals/internet-only-manuals-ioms"
+exclude_patterns = ["crosswalk", "xref"]
+manuals = ["100-introduction"]

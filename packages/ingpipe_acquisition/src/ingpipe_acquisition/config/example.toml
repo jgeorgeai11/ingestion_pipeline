@@ -1,0 +1,151 @@
+# Example configuration for the acquisition engine.
+#
+# Two entry points read this file shape:
+#
+#   uv run acquire            --config <instance>/config/ingpipe_acquisition/<source>/download_<source>.toml
+#   uv run data-val-downloads --config <instance>/config/ingpipe_acquisition/<source>/data_val_downloads.toml
+#
+# `acquire` is fully generic: a source whose targets can be COMPUTED (an
+# explicit list, or a URL template over a substitution list) needs no instance
+# code at all -- its instance declares a console script pointing straight at
+# `ingpipe_acquisition.runner:main`. A source whose targets must be FOUND by scraping
+# supplies a `discover(config)` callable and calls `main(discover=...)` from a
+# short wrapper; every key below still applies to it except `[discovery]`.
+
+# ---------------------------------------------------------------------------
+# Required
+# ---------------------------------------------------------------------------
+
+# Where the corpus lands. A relative path anchors to the INSTANCE ROOT (the
+# nearest ancestor of this config holding a pyproject.toml), never to the
+# working directory, so an installed console script behaves the same wherever
+# it is invoked from. The run's manifest is written here as
+# `.acquisition_manifest.json`.
+output_dir = "data/input/example_source"
+
+# ---------------------------------------------------------------------------
+# Optional (defaults shown)
+# ---------------------------------------------------------------------------
+
+# The discovery floor. A run whose discoverer yields fewer targets than this
+# FAILS before fetching anything. This is the key that turns "the site changed
+# its markup so the link pattern matched nothing" from a run that logs
+# `0 downloaded` and exits 0 into a loud failure. Only the instance knows how
+# many documents to expect, so there is no useful default above 1 -- but at 1,
+# an empty discovery can never pass.
+min_targets = 1
+
+# Seconds to wait before each fetch after the first. Paid only before a target
+# that is actually FETCHED: a resume run that skips 37 of 40 targets does not
+# sleep 37 times.
+request_delay_seconds = 1.0
+
+# Resolve and log every target and its destination, then stop. Writes no files
+# and no manifest -- but STILL enforces `min_targets` and the
+# destination-escape check, so a dry run surfaces a broken discovery instead of
+# quietly logging zero targets and exiting 0.
+dry_run = false
+
+# Re-fetch every target regardless of what the prior manifest recorded. With
+# `overwrite = false` (the default) a target is skipped only when the previous
+# run's manifest lists it with every recorded artifact still present at its
+# recorded byte size -- so an interrupted run resumes at the file level.
+overwrite = false
+
+# An optional per-response ceiling in bytes. Streaming aborts as soon as it is
+# exceeded, so a mis-resolved URL cannot fill the disk before anyone notices.
+# Omit for no limit.
+# max_bytes = 524288000
+
+# ---------------------------------------------------------------------------
+# [http] -- transport behavior
+# ---------------------------------------------------------------------------
+#
+# There is deliberately NO verify_ssl key. Verification is always on, and no
+# config in this repo can turn it off; a genuinely broken host is handled by
+# passing a configured session in code, which is a visible decision.
+[http]
+# Retry attempts after the first, covering connection errors, read errors, and
+# the transient status codes (429, 500, 502, 503, 504). A 404 is never retried:
+# a missing document is an answer, not a hiccup.
+retries = 3
+# urllib3 exponential backoff factor, in seconds. 0 retries immediately.
+backoff_factor = 0.5
+# Default per-request timeout in seconds, applied to every request.
+timeout = 60.0
+
+# ---------------------------------------------------------------------------
+# [discovery] -- required ONLY for a config-driven source
+# ---------------------------------------------------------------------------
+#
+# Omit this table entirely when the instance supplies a `discover` callable.
+#
+# kind = "templated": one URL template and one destination template over a list
+# of substitution values. Exactly one placeholder, named by `variable`, is
+# substituted; anything else that varies (a release point, a year) belongs in
+# the template string, so a refresh is one edit in one place.
+[discovery]
+kind = "templated"
+variable = "title"
+values = ["05", "10", "42"]
+url_template = "https://example.gov/releases/pdf_usc{title}@119-73not60.zip"
+destination_template = "usc{title}/pdf_usc{title}.zip"
+# Optional: a logical grouping label carried into the manifest for reporting.
+group_template = "usc{title}"
+
+# kind = "explicit": an authored list, for a handful of stable URLs that follow
+# no pattern worth templating.
+#
+# [discovery]
+# kind = "explicit"
+# targets = [
+#     { url = "https://example.gov/a.pdf", destination = "a.pdf" },
+#     { url = "https://example.gov/b.pdf", destination = "sub/b.pdf", group = "sub" },
+# ]
+#
+# Every destination must be RELATIVE and must not escape the output root: a
+# scraped page can influence a destination, so an absolute path or a `..`
+# component fails the run before anything is fetched.
+
+# ---------------------------------------------------------------------------
+# [extract] -- optional post-processing for archive sources
+# ---------------------------------------------------------------------------
+#
+# When present, each fetched archive is extracted into its destination's
+# directory and the extracted files -- not the archive -- become the artifacts
+# the manifest records and the validator checks. Omit the table for a source
+# that downloads documents directly.
+[extract]
+# Set false to keep the table documented but inactive.
+enabled = true
+# Glob patterns naming the members to extract. Only matching members are
+# written; the archive is never fully unpacked and then pruned. An archive with
+# no matching member FAILS its target rather than reporting success.
+keep = ["*.pdf"]
+# Discard the archive's internal directory layout so every kept file lands
+# directly in the destination's directory.
+flatten = true
+# Remove the archive after a successful extraction; an archive is not corpus
+# content and would otherwise be ingested or validated as though it were.
+delete_archive = true
+
+# ---------------------------------------------------------------------------
+# data-val-downloads config
+# ---------------------------------------------------------------------------
+#
+# The validator takes its own config, which needs only `output_dir` (the same
+# value as the acquisition config, so it reads the same manifest -- it is
+# already set at the top of this file) plus the optional per-extension content
+# checks below. It asserts that the manifest exists and parses, that every
+# recorded artifact exists at its recorded byte size, and that no entry was
+# recorded as failed.
+#
+# `[content_checks]` is a REAL table here rather than a commented block: a
+# commented block is contract documentation nothing can check, so it drifts from
+# `validate_content_checks` exactly the way an unchecked example drifts from
+# `validate_config`. Each entry maps a lowercase file extension (leading dot
+# required) to one of the checks the validator implements. Omit the table
+# entirely for a source whose artifacts need no content check.
+[content_checks]
+".pdf" = "pdf"   # must begin with the %PDF magic bytes
+".zip" = "zip"   # must have a readable central directory and at least one member

@@ -1,0 +1,63 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/cms_iom/ingest_policy_pub_100_08.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "cms_iom"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/cms_iom/2026-06-11/pub_100_08_program_integrity/"
+documents = [
+    { file = "pim83_attachment_855r.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 15 Attachment - Processing Guide-855R", collection_path = "cms_iom.pub_100_08_program_integrity.pim83_attachment_855r" },
+    { file = "pim83attachment855o.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 15 Attachment - Processing Guide-855O", collection_path = "cms_iom.pub_100_08_program_integrity.pim83attachment855o" },
+    { file = "pim83c01.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 1 - Overview of Medical Review (MR) and Program Integrity (PI) Programs", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c01" },
+    { file = "pim83c02.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 2 - Data Analysis", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c02" },
+    { file = "pim83c03.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 3 - Verifying Potential Errors and Taking Corrective Actions", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c03" },
+    { file = "pim83c04.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 4 - Program Integrity", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c04" },
+    { file = "pim83c05.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 5 - Items and Services Having Special DME Review Considerations", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c05" },
+    { file = "pim83c06.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 6 - Medicare Contractor Medical Review Guidelines for Specific Services", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c06" },
+    { file = "pim83c07.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 7 - MR Reports", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c07" },
+    { file = "pim83c08.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 8 - Administrative Actions and Statistical Sampling for Overpayment Estimates", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c08" },
+    { file = "pim83c09.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 9 - The Medicare Fee-for Service (FFS) Recovery Audit Program", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c09" },
+    { file = "pim83c10.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 10 - Medicare Enrollment", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c10" },
+    { file = "pim83c11.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 11 - Fiscal Administration", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c11" },
+    { file = "pim83c12.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 12 - The Comprehensive Error Rate Testing Program", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c12" },
+    { file = "pim83c13.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 13 - Local Coverage Determinations", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c13" },
+    { file = "pim83c14.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 14 - Reserved for Future Use", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c14" },
+    { file = "pim83c15.pdf", title = "Pub. 100-08: Medicare Program Integrity — Chapter 15 - Medicare Enrollment", collection_path = "cms_iom.pub_100_08_program_integrity.pim83c15" },
+    { file = "pim83exhibitspdf.pdf", title = "Pub. 100-08: Medicare Program Integrity — Exhibits", collection_path = "cms_iom.pub_100_08_program_integrity.pim83exhibitspdf" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/cms_iom/2026-06-11/pub_100_08_program_integrity/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/cms_iom/2026-06-11/pub_100_08_program_integrity/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Internet-Only Manuals — ingested policy documents stored as section-level text with hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested CMS IOM chapter document (PDF or .docx), keyed by collection_path (an ltree of <schema>.<manual folder>.<chapter>); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each CMS IOM chapter — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering manual text"

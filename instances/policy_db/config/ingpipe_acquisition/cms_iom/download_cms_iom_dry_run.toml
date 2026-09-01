@@ -1,0 +1,34 @@
+# Dry-run configuration for the acquisition engine, cms_iom source.
+#
+# Usage: uv run download-cms-iom \
+#            --config instances/policy_db/config/ingpipe_acquisition/cms_iom/download_cms_iom_dry_run.toml
+#
+# Scrapes the index and the selected manual page, logs every resolved chapter
+# URL and its destination, and stops. No files, no manifest. `min_targets` and
+# the destination-escape check still run, so a preview fails loudly on a broken
+# scrape instead of logging zero targets and exiting 0.
+#
+# The exclude patterns MATCH the real run's, so this previews what the real run
+# would actually do -- previously the dry run excluded only "crosswalk" while
+# the real run also excluded "xref", making the preview wrong by construction.
+
+output_dir = "data/input/cms_iom/2026-06-11"
+
+# This config narrows to one manual, so the floor states what THIS config
+# expects to resolve, not what the corpus contains.
+min_targets = 1
+
+request_delay_seconds = 1.0
+dry_run = true
+overwrite = false
+
+[http]
+retries = 3
+backoff_factor = 0.5
+timeout = 120.0
+
+[discovery]
+base_url = "https://www.cms.gov"
+index_path = "/medicare/regulations-guidance/manuals/internet-only-manuals-ioms"
+exclude_patterns = ["crosswalk", "xref"]
+manuals = ["100-introduction"]

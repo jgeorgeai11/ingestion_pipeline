@@ -1,0 +1,64 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/cms_iom/ingest_policy_pub_100_11.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "cms_iom"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/cms_iom/2026-06-11/pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual/"
+documents = [
+    { file = "pace111_app1.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Appendix 1", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111_app1" },
+    { file = "pace111_toc.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Table of Contents", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111_toc" },
+    { file = "pace111c01.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 1 - Introduction to PACE", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c01" },
+    { file = "pace111c02.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 2 - Administrative Requirements", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c02" },
+    { file = "pace111c03.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 3 - Marketing", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c03" },
+    { file = "pace111c04.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 4 - Enrollment and Disenrollment", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c04" },
+    { file = "pace111c05.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 5 - Participant Rights and Restraint Policies", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c05" },
+    { file = "pace111c06.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 6 - Services", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c06" },
+    { file = "pace111c07.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 7 - Service Delivery Settings", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c07" },
+    { file = "pace111c08.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 8 - IDT, Assessment & Care Planning", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c08" },
+    { file = "pace111c09.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 9 - Organization's Relationship with Health Care Providers", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c09" },
+    { file = "pace111c10.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 10 - Quality Assessment and Performance Improvement", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c10" },
+    { file = "pace111c11.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 11 - Grievances and Appeals", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c11" },
+    { file = "pace111c12.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 12 - Medical Records Documentation", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c12" },
+    { file = "pace111c13.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 13 - Payments to PACE Organizations", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c13" },
+    { file = "pace111c14.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 14 - Coordination of Benefits", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c14" },
+    { file = "pace111c15.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 15 - Organization Monitoring and Auditing", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c15" },
+    { file = "pace111c16.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 16 - Sanctions, Enforcement Actions and Termination", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c16" },
+    { file = "pace111c17.pdf", title = "Pub. 100-11: Programs of All-Inclusive Care for the Elderly (PACE) — Chapter 17 - Application and Waiver Processes, and Program Agreement Requirements", collection_path = "cms_iom.pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual.pace111c17" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/cms_iom/2026-06-11/pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/cms_iom/2026-06-11/pub_100_11_programs_of_all_inclusive_care_for_the_elderly_pace_manual/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Internet-Only Manuals — ingested policy documents stored as section-level text with hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested CMS IOM chapter document (PDF or .docx), keyed by collection_path (an ltree of <schema>.<manual folder>.<chapter>); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each CMS IOM chapter — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering manual text"

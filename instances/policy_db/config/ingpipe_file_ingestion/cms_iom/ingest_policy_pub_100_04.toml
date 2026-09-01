@@ -1,0 +1,84 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/cms_iom/ingest_policy_pub_100_04.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "cms_iom"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/cms_iom/2026-06-11/pub_100_04_claims_processing/"
+documents = [
+    { file = "clm104c01.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 1 - General Billing Requirements", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c01" },
+    { file = "clm104c02.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 2 - Admission and Registration Requirements", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c02" },
+    { file = "clm104c03.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 3 - Inpatient Hospital Billing", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c03" },
+    { file = "clm104c04.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 4 - Part B Hospital (Including Inpatient Hospital Part B and OPPS)", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c04" },
+    { file = "clm104c05.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 5 - Part B Outpatient Rehabilitation and CORF/OPT Services", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c05" },
+    { file = "clm104c06.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 6 - Inpatient Part A Billing and SNF Consolidated Billing", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c06" },
+    { file = "clm104c07.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 7 - SNF Part B Billing (Including Inpatient Part B and Outpatient Fee Schedule)", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c07" },
+    { file = "clm104c08.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 8 - Outpatient ESRD Hospital, Independent Facility, and Physician/Supplier Claims", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c08" },
+    { file = "clm104c09.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 9 - Rural Health Clinics/Federally Qualified Health Centers", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c09" },
+    { file = "clm104c10.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 10 - Home Health Agency Billing", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c10" },
+    { file = "clm104c11.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 11 - Processing Hospice Claims", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c11" },
+    { file = "clm104c12.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 12 - Physicians/Nonphysician Practitioners", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c12" },
+    { file = "clm104c13.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 13 - Radiology Services and Other Diagnostic Procedures", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c13" },
+    { file = "clm104c14.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 14 - Ambulatory Surgical Centers", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c14" },
+    { file = "clm104c15.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 15 - Ambulance", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c15" },
+    { file = "clm104c16.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 16 - Laboratory Services", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c16" },
+    { file = "clm104c17.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 17 - Drugs and Biologicals", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c17" },
+    { file = "clm104c18.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 18 - Preventive and Screening Services", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c18" },
+    { file = "clm104c19.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 19 - Indian Health Services", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c19" },
+    { file = "clm104c20.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 20 - Durable Medical Equipment, Prosthetics, Orthotics and Supplies (DMEPOS)", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c20" },
+    { file = "clm104c21.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 21 - Medicare Summary Notices", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c21" },
+    { file = "clm104c22.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 22 - Remittance Advice", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c22" },
+    { file = "clm104c23.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 23 - Fee Schedule Administration and Coding Requirements", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c23" },
+    { file = "clm104c24.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 24 - General EDI and EDI Support Requirements, Electronic Claims and Coordination of Benefits Requirements, Mandatory Electronic Filing of Medicare Claims", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c24" },
+    { file = "clm104c25.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 25 - Completing and Processing the Form CMS-1450 Data Set", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c25" },
+    { file = "clm104c26.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 26 - Completing and Processing Form CMS-1500 Data Set", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c26" },
+    { file = "clm104c27.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 27 - Contractor Instructions for OCS", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c27" },
+    { file = "clm104c28.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 28 - Coordination With Medigap, Medicaid, and Other Complementary Insurers", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c28" },
+    { file = "clm104c29.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 29 - Appeals of Claims Decisions", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c29" },
+    { file = "clm104c30.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 30 - Financial Liability Protections", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c30" },
+    { file = "clm104c31.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 31 - ANSI X12N Formats Other Than Claims or Remittance", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c31" },
+    { file = "clm104c32.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 32 - Billing Requirements for Special Services", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c32" },
+    { file = "clm104c33.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 33 - Miscellaneous Hold Harmless Provisions", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c33" },
+    { file = "clm104c34.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 34 - Reopening and Revision of Claim Determinations and Decisions", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c34" },
+    { file = "clm104c35.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 35 - Independent Diagnostic Testing Facility (IDTF)", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c35" },
+    { file = "clm104c36.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 36 - Competitive Bidding", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c36" },
+    { file = "clm104c37.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 37 - Department of Veterans Affairs (VA) Claims Adjudication Services Project", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c37" },
+    { file = "clm104c38.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 38 - Emergency Preparedness Fee-For-Service Guidance", collection_path = "cms_iom.pub_100_04_claims_processing.clm104c38" },
+    { file = "chapter-39-opioid-treatment-programs-otps.pdf", title = "Pub. 100-04: Medicare Claims Processing — Chapter 39 - Opioid Treatment Programs (OTPs)", collection_path = "cms_iom.pub_100_04_claims_processing.chapter_39_opioid_treatment_programs_otps" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/cms_iom/2026-06-11/pub_100_04_claims_processing/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/cms_iom/2026-06-11/pub_100_04_claims_processing/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Internet-Only Manuals — ingested policy documents stored as section-level text with hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested CMS IOM chapter document (PDF or .docx), keyed by collection_path (an ltree of <schema>.<manual folder>.<chapter>); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each CMS IOM chapter — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering manual text"

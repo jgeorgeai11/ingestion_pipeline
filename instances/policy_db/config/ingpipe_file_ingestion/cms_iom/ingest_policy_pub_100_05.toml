@@ -1,0 +1,55 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/cms_iom/ingest_policy_pub_100_05.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "cms_iom"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/cms_iom/2026-06-11/pub_100_05_secondary_payer/"
+documents = [
+    { file = "chapter-7-msp-recovery.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 7 - MSP Recovery", collection_path = "cms_iom.pub_100_05_secondary_payer.chapter_7_msp_recovery" },
+    { file = "msp105c01.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 1 - General MSP Overview", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c01" },
+    { file = "msp105c02.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 2 - MSP Provisions", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c02" },
+    { file = "msp105c03.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 3 - MSP Provider, Physician, and Other Supplier Billing Requirements", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c03" },
+    { file = "msp105c04.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 4 - Coordination of Benefits Contractor (COBC) Requirements", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c04" },
+    { file = "msp105c05.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 5 - Contractor MSP Claims Prepayment Processing Requirements", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c05" },
+    { file = "msp105c05_att1pdf.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 5 Attachment 1 - ECRS Web User Guide", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c05_att1pdf" },
+    { file = "msp105c05_att2pdf.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 5 Attachment 2 - ECRS Quick Reference Card", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c05_att2pdf" },
+    { file = "msp105c06.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 6 - Medicare Secondary Payer (MSP) OCS Process", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c06" },
+    { file = "msp105c08.pdf", title = "Pub. 100-05: Medicare Secondary Payer — Chapter 8 - Affiliated Contractor Interaction with Medicare Secondary Payer (MSP) Recovery Audit Contractors (RACs)", collection_path = "cms_iom.pub_100_05_secondary_payer.msp105c08" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/cms_iom/2026-06-11/pub_100_05_secondary_payer/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/cms_iom/2026-06-11/pub_100_05_secondary_payer/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Internet-Only Manuals — ingested policy documents stored as section-level text with hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested CMS IOM chapter document (PDF or .docx), keyed by collection_path (an ltree of <schema>.<manual folder>.<chapter>); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each CMS IOM chapter — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering manual text"

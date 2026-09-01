@@ -1,0 +1,23 @@
+[project]
+name = "ingpipe-excel-ingestion"
+version = "0.1.0"
+description = "Excel workbook parsing and loading into structured PostgreSQL tables"
+requires-python = ">=3.13"
+dependencies = [
+    "ingpipe-lib",
+    "openpyxl>=3.1.5",
+    "sqlalchemy>=2.0.46",
+    "psycopg2-binary>=2.9.11",
+]
+
+[project.scripts]
+ingest-excel = "ingpipe_excel_ingestion.ingest_excel:main"
+data-val-excel-inputs = "ingpipe_excel_ingestion.data_validation.data_val_excel_inputs:main"
+data-val-excel-outputs = "ingpipe_excel_ingestion.data_validation.data_val_excel_outputs:main"
+
+[tool.uv.sources]
+ingpipe-lib = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

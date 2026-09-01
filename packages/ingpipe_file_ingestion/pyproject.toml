@@ -1,0 +1,27 @@
+[project]
+name = "ingpipe-file-ingestion"
+version = "0.1.0"
+description = "Docling-based document parsing, cleaning, and loading into a PostgreSQL corpus"
+requires-python = ">=3.13"
+dependencies = [
+    "ingpipe-lib",
+    "docling>=2.107",
+    "docling-core>=2.85",
+    "pdfplumber>=0.11.9",
+    "pydantic>=2.12.5",
+    "sqlalchemy>=2.0.46",
+    "psycopg2-binary>=2.9.11",
+]
+
+[project.scripts]
+ingest-files = "ingpipe_file_ingestion.ingest:main"
+quality-report = "ingpipe_file_ingestion.quality_report:main"
+data-val-cleaned-json = "ingpipe_file_ingestion.data_validation.data_val_cleaned_json:main"
+data-val-loaded-documents = "ingpipe_file_ingestion.data_validation.data_val_loaded_documents:main"
+
+[tool.uv.sources]
+ingpipe-lib = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

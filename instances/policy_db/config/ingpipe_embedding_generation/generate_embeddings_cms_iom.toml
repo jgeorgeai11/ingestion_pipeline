@@ -1,0 +1,39 @@
+# Configuration for generate_embeddings.py
+#
+# Usage: uv run generate-embeddings --config instances/policy_db/config/ingpipe_embedding_generation/generate_embeddings_cms_iom.toml --env-file instances/policy_db/.env
+
+# Required fields
+db_name = "policy_db"
+db_schema = "cms_iom"
+model_name = "ibm-granite/granite-embedding-small-english-r2"
+
+# Optional fields (defaults shown)
+batch_size = 64       # default: 64
+max_tokens = 500      # default: 500
+overlap_tokens = 50   # default: 50
+overwrite = false      # default: false
+
+# Tables to embed. Each key is a source table name.
+#
+# Per-table fields:
+#   embed_columns    (required)  columns to concatenate and chunk as the embedded body
+#   header_columns   (optional)  columns whose "col: value || ..." text is prepended as a
+#                                contextual header to EVERY chunk (so tail chunks keep the
+#                                heading in the vector, chunk_text, and FTS); the header's
+#                                token cost is reserved from max_tokens. default: [] (no header)
+#   embedding_table  (optional)  output table name, default: {source_table}_embedding
+#   batch_size       (optional)  override top-level batch_size
+#   max_tokens       (optional)  override top-level max_tokens
+#   overlap_tokens   (optional)  override top-level overlap_tokens
+#   overwrite        (optional)  override top-level overwrite
+#   source_filter    (optional)  LIKE patterns to narrow source rows
+#                                multiple values per column are ORed; columns are ANDed
+#
+# Example with all controls:
+# some_table = { embed_columns = ["col_a", "col_b"], header_columns = ["heading_text"], embedding_table = "custom_name", batch_size = 128, max_tokens = 500, overlap_tokens = 75, overwrite = true, source_filter = { collection_path = ["file_a%", "file_b%"] } }
+[tables]
+# Prepend the document identity (publication.chapter) + section heading to every
+# chunk: heading_text gives section context, collection_path the publication/
+# chapter identity (lands in both the vector and the chunk_tsv FTS). Publication
+# scoping is still best done via the collection_path PK / ltree filter at query time.
+document_content = { embed_columns = ["content_text"], header_columns = ["collection_path", "heading_text"] }

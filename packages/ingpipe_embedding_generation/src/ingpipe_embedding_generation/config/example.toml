@@ -1,0 +1,97 @@
+# =============================================================================
+# Embedding generation — EXAMPLE config (all options, annotated)
+#
+# Embeds rows from a SOURCE table (written by ingpipe_file_ingestion / ingpipe_excel_ingestion,
+# and validated) into a hybrid retrieval table: a dense `embedding vector(N)`
+# (HNSW, cosine) plus a generated `chunk_tsv` full-text column (GIN). One config
+# targets ONE database + schema + embedding model and may embed SEVERAL source
+# tables (one entry each under [tables]).
+#
+# Per source table, the embedding table is created keyed by the source's PRIMARY
+# KEY (auto-detected) + chunk_number, with a foreign key back to the source
+# ON DELETE CASCADE, an `embedding vector(N)` column (N = the model's output
+# dimension, auto-detected — no schema edit on a model change), and a generated
+# `chunk_tsv` tsvector. A source table with NO primary key is reported as a
+# per-table failure (the embedding table needs the source's unique key).
+#
+# Idempotent: only rows lacking an embedding are processed (a left-anti-join on
+# the PK), so a re-run embeds just the new rows. `overwrite` re-embeds matching
+# rows (delete + regenerate) — use it to refresh CHANGED content, since the
+# skip-logic alone catches a MISSING row, not a changed one.
+#
+# All tables in one config share ONE model_name; keep one model across the whole
+# system so a query embedding compares against compatible vectors.
+#
+# Reference, not a runnable config. `# default:` marks the omitted value.
+# =============================================================================
+
+
+# ------------------------------------------------------------------ top level
+db_name    = "example_db"       # REQUIRED. Database holding the source + embedding tables.
+db_schema  = "example_schema"   # REQUIRED. Schema holding them.
+model_name = "ibm-granite/granite-embedding-small-english-r2"   # REQUIRED.
+                             #   Self-hosted SentenceTransformer. Its output dimension
+                             #   sets the `vector(N)` column (auto-detected).
+
+# Defaults applied to every [tables] entry; each is overridable per table.
+batch_size     = 64     # OPTIONAL  # default: 64.  Chunks encoded + inserted per batch
+                        #   (a source row's chunks always commit together — row-atomic).
+max_tokens     = 500    # OPTIONAL  # default: 500. Max model tokens per chunk; a longer
+                        #   row is split on word boundaries. A retrieval-precision choice,
+                        #   well under the model's context window (so never a truncation).
+overlap_tokens = 50     # OPTIONAL  # default: 50.  Token overlap between adjacent chunks.
+overwrite      = false  # OPTIONAL  # default: false.
+                        #   false -> embed only rows lacking an embedding (idempotent).
+                        #   true  -> delete matching rows' embeddings, then regenerate
+                        #            (pair with source_filter to refresh a changed subset).
+
+
+# =============================================================================
+# [tables] — one entry per SOURCE TABLE to embed. The KEY is the source table
+# name; the value is its options. Per-table keys:
+#   embed_columns    REQUIRED  columns concatenated as newline key-value
+#                              ("col: value\ncol: value") and chunked into the
+#                              embedded text (also the stored chunk_text + FTS).
+#   header_columns   OPTIONAL  columns whose "col: value" text is prepended to
+#                              EVERY chunk of a row as a contextual header (so
+#                              tail chunks keep their context); its token cost is
+#                              reserved from max_tokens.        # default: [] (none)
+#   embedding_table  OPTIONAL  output table name.   # default: "<source_table>_embedding"
+#   source_filter    OPTIONAL  embed only matching rows: { column = "LIKE-pattern"
+#                              or [patterns] }. Patterns are ORed within a column,
+#                              ANDed across columns; the column is cast to text so
+#                              LIKE works on an ltree (e.g. collection_path).
+#   table_comment    OPTIONAL  COMMENT ON TABLE description for the embedding
+#                              table, applied (refreshed) on every run and surfaced
+#                              by the MCP server's list_tables.
+#                              # default: "Header-prefixed chunks of <schema>.<source_table>
+#                              # for hybrid retrieval (embedding HNSW + chunk_tsv GIN);
+#                              # backs the search tool" — the "Header-prefixed " lead-in
+#                              # appears only when header_columns is set, so the text
+#                              # never claims a prefix the config doesn't produce.
+#   batch_size / max_tokens / overlap_tokens / overwrite
+#                    OPTIONAL  per-table overrides of the top-level defaults.
+# =============================================================================
+[tables]
+# Document body, with the section heading prepended to every chunk for context.
+document_content = { embed_columns = ["content_text"], header_columns = ["heading_text"] }
+
+# A tabular source (excel): one short row per chunk; prepend the sheet identity.
+sheet_content = { embed_columns = ["row_text"], header_columns = ["collection_path"] }
+
+# All options at once: a custom output name, a subset filter, and overrides.
+some_table = { embed_columns = ["col_a", "col_b"], header_columns = ["title"], embedding_table = "some_table_vec", source_filter = { collection_path = ["example_doc_a%", "example_doc_b%"] }, batch_size = 128, max_tokens = 400, overlap_tokens = 40, overwrite = true }
+
+
+# =============================================================================
+# Behavior / data model (context, not config):
+#   - <embedding_table> columns: the mirrored source PK column(s), chunk_number,
+#     chunk_text, word_count, embedding vector(N), and a generated
+#     chunk_tsv tsvector. PK = (source PK, chunk_number); FK -> source(PK)
+#     ON DELETE CASCADE; HNSW index on embedding (cosine) + GIN on chunk_tsv.
+#   - Chunking is token-budgeted (the model's own tokenizer), word-boundary
+#     preserving, with overlap; a short row passes through as a single chunk.
+#   - Tables are created `if not exists`; re-runs add only missing rows' chunks.
+#   - One model per config (ideally per system): the stored vectors' dimension
+#     and the query-time model must match for similarity to be meaningful.
+# =============================================================================

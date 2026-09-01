@@ -1,0 +1,152 @@
+# =============================================================================
+# File ingestion — EXAMPLE config (all options, annotated)
+#
+# Pipeline (three steps, each independently toggleable via its `run` flag):
+#   1. parse  — Docling converts each source file (PDF / .docx) to Docling JSON
+#               in parsed_dir. JSON is the ONLY output; the clean step reads it.
+#   2. clean  — parse the Docling JSON into cleaned, db-ready section JSON in
+#               cleaned_dir (deterministic, identity-agnostic structure recovery).
+#   3. load   — insert one `document` row + its `document_content` section rows
+#               into Postgres.
+#
+# Identity is `collection_path` (a sanitized ltree), authored per document in
+# this config and VALIDATED (never rewritten). It is `document`'s primary key,
+# and `document_content.collection_path` is a cascading foreign key onto it.
+# Convention (not enforced): `<schema>.<set>.<doc>`, e.g.
+# `cms_iom.pub_100_01_general_information.ge101c01`.
+#
+# Re-ingestion keys on collection_path alone:
+#   overwrite = false -> an already-loaded collection_path is SKIPPED (idempotent)
+#   overwrite = true  -> it is deleted (content cascades) and re-inserted
+# So multiple document sets ACCUMULATE into the same document/document_content
+# tables, each namespaced by its collection_path; loading a new set never
+# touches existing paths.
+#
+# Reference, not a runnable config. `# default:` marks the omitted value.
+# =============================================================================
+
+
+# ------------------------------------------------------------------ top level
+# The database target lives at the TOP LEVEL, matching ingest_excel and
+# generate_embeddings. Both are REQUIRED whenever the load step runs; the schema
+# is created if absent. (The nested `[load].db_name` / `[load].db_schema` form is
+# DEPRECATED: `resolve_db_target` still reads it as a fallback so existing
+# configs elsewhere keep working, but it logs a WARNING on every run and new
+# configs must not use it. The output validator resolves the target through the
+# same function, so the two can never disagree.)
+db_name   = "policy_db"   # REQUIRED when [load].run is true
+db_schema = "example"     # REQUIRED when [load].run is true
+
+overwrite = false   # OPTIONAL  # default: false
+                    #   false -> skip a document (by collection_path) already loaded.
+                    #   true  -> replace it (delete-by-collection_path + reinsert);
+                    #            deleting the `document` row cascades to its content.
+
+
+# =============================================================================
+# [module] — the source files and their per-document metadata.
+#   source_dir  REQUIRED  directory holding the source files (PDF / .docx)
+#   documents   REQUIRED  list of per-document entries; per-document keys:
+#     file             REQUIRED  filename relative to source_dir
+#     title            REQUIRED  human-readable, self-describing label stored on
+#                                the `document` row (fold any set/collection name
+#                                in here — there is NO separate module-name field)
+#     collection_path  REQUIRED  authored ltree identity (validated, not rewritten);
+#                                the document primary key. An INVALID path drops
+#                                just that document (recorded as skipped); a
+#                                DUPLICATE `file` across entries is a hard error.
+#     do_ocr           OPTIONAL  per-document override of [parse].do_ocr
+#     pdf_backend      OPTIONAL  per-document override of [parse].pdf_backend
+# =============================================================================
+[module]
+source_dir = "data/input/example_set/"   # REQUIRED
+documents = [
+    # minimal: file + title + collection_path (inherits [parse] do_ocr/pdf_backend)
+    { file = "doc_a.pdf", title = "Example Set — Document A", collection_path = "example.example_set.doc_a" },
+    # a Word document
+    { file = "doc_b.docx", title = "Example Set — Document B", collection_path = "example.example_set.doc_b" },
+    # a scanned PDF needing OCR, on a per-document backend override
+    { file = "scan_c.pdf", title = "Example Set — Scanned Document C", collection_path = "example.example_set.scan_c", do_ocr = true, pdf_backend = "pypdfium2" },
+]
+
+
+# =============================================================================
+# [parse] — Docling conversion to Docling JSON.
+# =============================================================================
+[parse]
+run        = true                          # OPTIONAL  # default: true
+parsed_dir = "data/parsed/example_set/"    # REQUIRED when parse (or clean) runs
+do_ocr      = false      # OPTIONAL  # default: false. Document-set default; set true
+                         #   for scanned/image PDFs. Override per file in [module].documents.
+pdf_backend = "dlparse"  # OPTIONAL  # default: "dlparse". One of:
+                         #   "dlparse" (docling-parse, the canonical backend; default) or
+                         #   "pypdfium2" (lighter, pdfium-based). Large-PDF memory is
+                         #   bounded by max_pages_per_batch, not the backend choice.
+                         #   Override per file in [module].documents.
+max_pages_per_batch = 25 # OPTIONAL  # default: 25. A non-negative integer; run-level
+                         #   (not per-file). A PDF with more pages than this is
+                         #   parsed in page-range slices
+                         #   and stitched back (DoclingDocument.concatenate) to bound
+                         #   per-parse memory — large PDFs over-commit and OOM/crash
+                         #   otherwise. Lossless vs single-pass; 0 disables batching.
+# NOTE: output is always Docling JSON — there is no output_formats knob, because
+# the clean step consumes only the JSON.
+
+
+# =============================================================================
+# [clean] — parse the Docling JSON into cleaned section JSON.
+# =============================================================================
+[clean]
+run         = true                          # OPTIONAL  # default: true
+cleaned_dir = "data/cleaned/example_set/"   # REQUIRED when clean runs
+
+
+# =============================================================================
+# [load] — insert documents + sections into Postgres.
+#   db_name / db_schema are set at the TOP LEVEL (above), not here. The nested
+#   form below is shown only to name it as DEPRECATED — authoring it produces a
+#   WARNING per run and is the one thing in this file you should not copy.
+#   document_table / content_table name the table PAIR this config loads into;
+#   the schema.sql DDL template is rendered with these (validated) names. The
+#   pair is created if it does not exist and reused otherwise, so a run either
+#   creates the tables or STACKS new rows onto the existing ones (each row keyed
+#   by its collection_path; an already-loaded collection_path is skipped unless
+#   overwrite = true).
+#
+#   PER-CONFIG, NOT per-file: every document in this config loads into the same
+#   pair. There is no per-document table routing — to send different files to
+#   DIFFERENT tables, create a SEPARATE TOML (one config = one table pair).
+#
+#   Override the defaults when you want:
+#     - a SECOND, separately-named document store INSIDE the same schema
+#       (e.g. raw_document / raw_document_content alongside document/…), or
+#     - descriptively-named tables in a dedicated schema.
+# =============================================================================
+[load]
+run       = true          # OPTIONAL  # default: true
+# db_name   = "policy_db"   # DEPRECATED here — set it at the top level instead
+# db_schema = "example"     # DEPRECATED here — set it at the top level instead
+document_table = "document"          # OPTIONAL  # default: "document"  (this config's pair)
+content_table  = "document_content"  # OPTIONAL  # default: "document_content"
+
+# COMMENT ON descriptions (strings), applied at load AFTER the DDL template and
+# surfaced by the MCP server's list_schemas / list_tables. The template already
+# bakes GENERIC comments onto the table pair; set these only to override with
+# corpus-flavored text. Applied on EVERY run (COMMENT ON overwrites), so keep a
+# corpus's text identical across its configs — last writer wins. Omit a key
+# (default: none) to leave the existing comment alone.
+schema_comment         = "Example corpus — what this schema holds"     # OPTIONAL
+document_table_comment = "One row per ingested example document ..."   # OPTIONAL
+content_table_comment  = "Section-level text of each example doc ..."  # OPTIONAL
+
+
+# =============================================================================
+# Behavior / data model (context, not config):
+#   - `document`: one row per file — collection_path (PK, ltree), title,
+#     n_parsed_sections, source_binary_hash (change detection), ingested_at.
+#   - `document_content`: one row per parsed section — keyed
+#     (collection_path, sort_order); FK -> document(collection_path) ON DELETE
+#     CASCADE; carries heading_text / content_text (a section has at least one).
+#   - Tables are created with `if not exists`, so a set loads into existing
+#     tables (stacking) or creates them on first use.
+# =============================================================================

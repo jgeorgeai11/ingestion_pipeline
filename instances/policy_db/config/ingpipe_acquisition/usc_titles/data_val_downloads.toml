@@ -1,0 +1,19 @@
+# Download-validation configuration for the usc_titles corpus.
+#
+# Usage: uv run data-val-downloads \
+#            --config instances/policy_db/config/ingpipe_acquisition/usc_titles/data_val_downloads.toml
+#
+# Replaces data_val_downloaded_zips.py, which asserted the presence of the zip
+# archives the downloader DELETES after extraction -- so it failed after every
+# successful run. The check now runs against the manifest the acquisition run
+# wrote, whose entries record the extracted PDFs (the corpus content), not the
+# archives that no longer exist.
+
+# The same output root the acquisition config writes to, so this reads the
+# manifest that run produced.
+output_dir = "data/input/usc_titles"
+
+# The extracted artifacts are PDFs; the magic-byte check catches an error page
+# or an HTML redirect saved under a .pdf name.
+[content_checks]
+".pdf" = "pdf"

@@ -1,0 +1,48 @@
+# Configuration for generate_embeddings.py
+#
+# Usage: uv run generate-embeddings --config instances/policy_db/config/ingpipe_embedding_generation/generate_embeddings_qpp_cm.toml --env-file instances/policy_db/.env
+
+# Required fields
+db_name = "policy_db"
+db_schema = "qpp_cm"
+model_name = "ibm-granite/granite-embedding-small-english-r2"
+
+# Optional fields (defaults shown)
+batch_size = 64       # default: 64
+max_tokens = 500      # default: 500
+overlap_tokens = 50   # default: 50
+overwrite = false     # default: false
+
+# Tables to embed. Each key is a source table name.
+#
+# Per-table fields:
+#   embed_columns    (required)  columns to concatenate and embed
+#   embedding_table  (optional)  output table name, default: {source_table}_embedding
+#   batch_size       (optional)  override top-level batch_size
+#   max_tokens       (optional)  override top-level max_tokens
+#   overlap_tokens   (optional)  override top-level overlap_tokens
+#   overwrite        (optional)  override top-level overwrite
+#   source_filter    (optional)  LIKE patterns to narrow source rows
+#                                multiple values per column are ORed; columns are ANDed
+#
+# Example with all controls:
+# some_table = { embed_columns = ["col_a", "col_b"], embedding_table = "custom_name", batch_size = 128, max_tokens = 500, overlap_tokens = 75, overwrite = true, source_filter = { collection_path = ["file_a%", "file_b%"] } }
+# Tables run in declaration order, so the small table is declared first: an
+# interrupted run then loses the cheap work last rather than first. A kill during
+# sheet_content (~515k rows) previously left document_content (~1.4k rows) never
+# started, because it was queued behind it.
+[tables]
+# qpp_cm's MIF PDF sections (ingpipe_file_ingestion document_content): embed the body and
+# prepend the document identity + section heading to every chunk. heading_text
+# alone is generic across measures ("Cohort", "Measure Description"), so
+# collection_path supplies the measure identity (it lands in both the vector and
+# the chunk_tsv FTS); measure-scoping is still best done via the collection_path
+# PK column / ltree filter at query time.
+document_content = { embed_columns = ["content_text"], header_columns = ["collection_path", "heading_text"] }
+
+# qpp_cm's consolidated content table (one embedded row per sheet row). row_text is
+# already newline key-value over the original headers. header_columns prepends the
+# <workbook>.<sheet> identity (collection_path) to every row's embedding so a bare
+# row carries its sheet/measure context for semantic retrieval (the human title
+# lives on the `sheet` table, which the embedder can't join to).
+sheet_content = { embed_columns = ["row_text"], header_columns = ["collection_path"] }

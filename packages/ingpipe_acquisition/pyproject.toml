@@ -1,0 +1,31 @@
+# The acquisition engine package: one correct download implementation, a
+# download-time manifest, a run loop that exits non-zero, and a
+# manifest-driven validator. It is a sibling of ingpipe-file-ingestion rather than a
+# part of ingpipe-lib because it is a pipeline stage with its own entry
+# points and config contract, and because requests/urllib3 would otherwise be
+# inherited by every workspace member that makes no network call at all.
+[project]
+name = "ingpipe-acquisition"
+version = "0.1.0"
+description = "Source-agnostic download engine: fetch, manifest, run loop, and manifest-driven validation"
+requires-python = ">=3.13"
+dependencies = [
+    "ingpipe-lib",
+    "requests>=2.32.5",
+    "urllib3>=2.6.3",
+]
+
+[project.scripts]
+# The generic, config-only entry point: a source whose targets can be COMPUTED
+# (a URL template over a substitution list, or an explicit list) needs no
+# instance code at all -- an instance declares its own command name pointing
+# straight at this function.
+acquire = "ingpipe_acquisition.runner:main"
+data-val-downloads = "ingpipe_acquisition.data_validation.data_val_downloads:main"
+
+[tool.uv.sources]
+ingpipe-lib = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

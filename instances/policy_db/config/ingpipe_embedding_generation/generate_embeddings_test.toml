@@ -1,0 +1,22 @@
+# Configuration for generate_embeddings.py — smoke-test config
+#
+# Embeds only the test document's sections (loaded by
+# config/ingpipe_file_ingestion/test/ingest_test_document.toml) into a dedicated
+# test embedding table, so the end-to-end pipeline can be smoke-run without
+# touching the corpus embedding tables.
+#
+# Usage: uv run generate-embeddings --config instances/policy_db/config/ingpipe_embedding_generation/generate_embeddings_test.toml --env-file instances/policy_db/.env
+
+# Required fields
+db_name = "policy_db"
+db_schema = "cms_iom"
+model_name = "ibm-granite/granite-embedding-small-english-r2"
+
+# Optional fields (defaults shown)
+batch_size = 64       # default: 64
+max_tokens = 500      # default: 500
+overlap_tokens = 50   # default: 50
+overwrite = true      # re-run the smoke test freshly each time
+
+[tables]
+test_document_content = { embed_columns = ["content_text"], header_columns = ["heading_text"], source_filter = { collection_path = ["cms_iom.test.%"] } }

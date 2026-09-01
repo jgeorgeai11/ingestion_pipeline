@@ -1,0 +1,508 @@
+# qpp_cm 2026 cost-measure code lists — explicit-row ingest config.
+# Generated once from the workbooks (marker-based structure
+# resolved to explicit row numbers); the module ships no
+# generation/detection code. One config for the year listing all
+# 35 workbooks (matches the prior per-year qpp_cm pattern).
+
+source_dir = "data/input/qpp_cm/2026/2026-cost-measure-codes-lists/"
+db_name    = "policy_db"
+db_schema  = "qpp_cm"
+
+# Every derived collection_path is placed under this schema-scoped branch of
+# the ltree tree. Without it each sheet's path is a bare `<stem>.<leaf>`
+# (`2025_12_py2026_codes_list_aki.triggers`), so an MCP corpus filter of
+# `qpp_cm.%` -- the natural way to scope a query to this schema -- matches NO
+# sheet and silently drops the entire excel leg from the result. The 326 sheet
+# entries below are deliberately left untouched: none authors a
+# `collection_path` override, so every leaf stays machine-derived and the
+# prefix applies uniformly.
+#
+# CHANGING THIS CHANGES EVERY SHEET'S IDENTITY. Rows already written under the
+# old paths are not migrated, so the corpus rebuild that follows this activity
+# is what puts the new identities in the database.
+collection_path_prefix = "qpp_cm.2026_cost_measure_codes_lists"
+overwrite  = false
+
+# COMMENT ON descriptions applied at ingest (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+# NOTE: the per-sheet table_comment texts below were verified against the
+# table columns and sample data; refine the QPP-specific semantics against
+# the measure documentation where deeper precision is needed.
+# Keep this text identical to the ingpipe-file-ingestion qpp_cm configs — last
+# writer wins and both legs describe the same schema.
+schema_comment = "CMS Quality Payment Program (QPP) cost-measure reference data — Cost Measure Information Form (MIF) documents, the consolidated source Excel workbooks, and structured per-measure lookup tables (codes, attribution, exclusions, service assignment, risk adjustment, triggers)"
+sheet_table_comment = "Catalog of ingested qpp_cm cost-measure workbook sheets — one row per sheet, keyed by collection_path (an ltree of qpp_cm.<year>_cost_measure_codes_lists.<workbook>.<sheet>); holds title, n_rows, source_binary_hash, and the structured table the sheet also feeds"
+content_table_comment = "Row-level text of every ingested qpp_cm workbook sheet — one row per spreadsheet row (collection_path, sort_order) rendered as newline key-value row_text over the ORIGINAL headers; this is the embedding leg, use the structured tables for exact code lookups"
+
+[files."2025-12-py2026-codes-list-aki-new-hd.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 23, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 39, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 133, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 3188, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 14, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 57, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 128, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 203, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-cataract1.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 8, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 10, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 13, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 957, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 7, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 570, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 113, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 472, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-chron-copd.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 126, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 43, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 9, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 28, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 2275, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 5574, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 14, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 51, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 136, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 557, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-ckd.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 96, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 12, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 5800, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 21566, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 116, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 12, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-colrec-rsct.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 41, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 13, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 33, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2448, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 11, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 2618, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 139, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 554, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-depression.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 174, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 32, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 14, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 111, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 25554, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 12, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 252, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 124, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 977, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-diabetes.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 102, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 404, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 27, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 3013, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 10742, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 7, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 9, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 127, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 1582, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-el-ha.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 8, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 3373, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 13, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 1224, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 132, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 315, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-emergency.xlsx"]
+sheets = [
+    # emergency's "Triggers" is a structurally different two-code paired-trigger
+    # layout (Code 1/Code 2/Claim Type(s) Checked/Logic Notes) that shares only
+    # "Initial Sort Order" with the standard single-code Triggers sheet in the
+    # other workbooks. Routed to its own table so the shared `triggers` table is
+    # not polluted with 8 mostly-NULL columns (the compatibility guard correctly
+    # refuses to merge it: r_in=0.11, r_ex=0.25). Still embedded into excel_content.
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 32, table = "triggers_emergency", table_comment = "Emergency trigger code pairs with claim-type and logic notes" },
+    { sheet = "ED_Visit_Types", header_row = 5, data_start_row = 7, data_end_row = 35, table = "ed_visit_types", table_comment = "Emergency-department visit types with rank" },
+    { sheet = "ED_Visit_Types_Details", header_row = 6, data_start_row = 8, data_end_row = 857, table = "ed_visit_types_details", table_comment = "ED visit-type code lists — codes by visit-type rank with claim-type flags" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 13, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Services", header_row = 6, data_start_row = 8, data_end_row = 13606, table = "services", table_comment = "Service definitions joining ED visit type and service-assignment category/window with code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 8, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 9, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 116, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 11, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-esrd.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 102, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 8, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 6446, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 21566, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 7, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 8, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 116, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 14, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-fihr.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 18, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 18, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2831, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 9, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 25, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 119, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 50, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-hd-access.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 13, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 16, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2533, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 8, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 13, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 120, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 39, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-heart-fail.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 168, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 56, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 2868, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 38850, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 12, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 136, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 121, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 922, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-ich-cva.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 13, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 16, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 114, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 4813, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 10, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 33, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 114, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 36, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-ip-copd.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 12, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 58, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 10, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 30, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 5401, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 11, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 190, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 128, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 176, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-ip-pci.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 20, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 9, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 192, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 1615, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 14, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 249, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 122, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 682, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-kidney-tplt.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 179, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 68, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 32146, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 51796, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 7, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 8, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 145, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 129, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-knee-arthro.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 9, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 9, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 10, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 6433, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 11, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 1104, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 121, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 543, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-l-fusion.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 11, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 9, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 31, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 15680, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 15, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 485, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 133, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 189, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-lgi-bleed.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 13, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 66, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 1983, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 10, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 32, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 130, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 182, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-low-back.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 209, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 295, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 10, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 202, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 1659, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 47595, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 12, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 104, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 125, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 790, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-lump-mast.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 11, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 9, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 10, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 34, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2233, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 12, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 32, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 135, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 240, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-mel-rsct.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 34, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 9, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 119, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2085, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 7, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 37, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 130, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 634, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-mspb-clinician.xlsx"]
+sheets = [
+    { sheet = "Attribution_Rule", header_row = 5, data_start_row = 7, data_end_row = 376, table = "attribution_rule", table_comment = "Base-DRG attribution rules — base_drg (with label) to attribution_rule (with label)" },
+    { sheet = "Med_Attribution_E_M", header_row = 6, data_start_row = 8, data_end_row = 19, table = "med_attribution_e_m", table_comment = "Medical attribution — attribution_rule to E&M CPT/HCPCS codes" },
+    { sheet = "Surg_Attribution_CPT_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 13282, table = "surg_attribution_cpt_hcpcs", table_comment = "Surgical attribution — attribution_rule/base_drg to CPT/HCPCS codes" },
+    { sheet = "SE_General_Rules", header_row = 5, data_start_row = 7, data_end_row = 21, table = "se_general_rules", table_comment = "General service-exclusion rules with time windows" },
+    { sheet = "SE_Post_OP_Clinician", header_row = 6, data_start_row = 8, data_end_row = 15584, table = "se_post_op_clinician", table_comment = "Service-exclusion decisions for the outpatient-clinician setting — by episode MDC, CCS category, and CPT/HCPCS, plus diagnosis" },
+    { sheet = "SE_Post_IP_Med", header_row = 5, data_start_row = 7, data_end_row = 1833, table = "se_post_ip_med", table_comment = "Service-exclusion decisions for the inpatient-medical setting — by episode MDC and base-DRG, plus diagnosis" },
+    { sheet = "SE_Post_IP_Surg", header_row = 5, data_start_row = 7, data_end_row = 5379, table = "se_post_ip_surg", table_comment = "Service-exclusion decisions for the inpatient-surgical setting — by episode MDC, base-DRG, and ICD-10-PCS, plus diagnosis" },
+    { sheet = "SE_Post_DME", header_row = 6, data_start_row = 8, data_end_row = 4283, table = "se_post_dme", table_comment = "Service-exclusion decisions for the DME setting — by episode MDC and CPT/HCPCS, plus diagnosis, each with an exclusion decision" },
+    { sheet = "RA_Vars", header_row = 6, data_start_row = 8, data_end_row = 123, table = "ra_vars", table_comment = "Risk-adjustment variable definitions (variable_type/name/description)" },
+]
+
+[files."2025-12-py2026-codes-list-ne-cabg.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 17, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 49, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 19, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 3037, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 12, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 89, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 122, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 257, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-op-pci.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 26, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2129, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 12, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 238, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 118, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 311, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-prost-ca.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 138, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 8, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 230, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 1181, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 14845, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 7, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 8, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 121, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 661, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-psych.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 8, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 29, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 13, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 71, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2453, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 11, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 30, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 120, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 64, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-resp-infxn.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 13, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 13, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 4246, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 37, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 210, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 119, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 160, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-rheum-arth.xlsx"]
+sheets = [
+    { sheet = "Triggers_HCPCS", header_row = 6, data_start_row = 8, data_end_row = 122, table = "triggers_hcpcs", table_comment = "Trigger HCPCS code list with code-use" },
+    { sheet = "Triggers_DGN", header_row = 6, data_start_row = 8, data_end_row = 316, table = "triggers_dgn", table_comment = "Trigger diagnosis code list" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 103, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 1683, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 29168, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 127, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 81, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-rleccli.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 31, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 11, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 83, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 3423, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 11, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 28, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 116, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 48, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-rn-stone.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 13, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 9, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 16, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2935, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 10, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 197, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 119, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 48, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-sepsis.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 31, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 71, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 8, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 18, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 115, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment_AB", header_row = 6, data_start_row = 8, data_end_row = 1849, table = "service_assignment_ab", table_comment = "Service-to-category assignment (Part A/B variant) — service/diagnosis pairs to assignment windows" },
+    { sheet = "Service_Assignment_D", header_row = 6, data_start_row = 8, data_end_row = 9278, table = "service_assignment_d", table_comment = "Service-to-category assignment (Part D) — code to service-assignment window/category" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 13, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 88, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 126, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 9833, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-ss-clnscpy.xlsx"]
+sheets = [
+    { sheet = "Triggers", header_row = 6, data_start_row = 8, data_end_row = 14, table = "triggers", table_comment = "Episode trigger code list (code_type/code/description)" },
+    { sheet = "Triggers_Details", header_row = 6, data_start_row = 8, data_end_row = 14, table = "triggers_details", table_comment = "Trigger component conditions — several code/flag columns per trigger-component variable (joint conditions), with timing/claim-type/logic notes" },
+    { sheet = "Sub_Groups", header_row = 5, data_start_row = 7, data_end_row = 9, table = "sub_groups", table_comment = "Cost-measure sub-group definitions" },
+    { sheet = "Sub_Groups_Details", header_row = 6, data_start_row = 8, data_end_row = 11, table = "sub_groups_details", table_comment = "Code lists mapping codes (several per row) to sub-group variables, with designation/timing/claim-type/logic notes" },
+    { sheet = "Attribution", header_row = 6, data_start_row = 8, data_end_row = 117, table = "attribution", table_comment = "Attribution code list — code_type/code to label, used in service attribution" },
+    { sheet = "Service_Assignment", header_row = 6, data_start_row = 8, data_end_row = 2014, table = "service_assignment", table_comment = "Service-to-category assignment — service/diagnosis pairs to assignment windows with high-level and procedure-code decisions" },
+    { sheet = "Exclusions", header_row = 5, data_start_row = 7, data_end_row = 10, table = "exclusions", table_comment = "Episode exclusion criteria — one row per exclusion" },
+    { sheet = "Exclusions_Details", header_row = 6, data_start_row = 8, data_end_row = 151, table = "exclusions_details", table_comment = "Code lists backing each exclusion — one or more diagnosis/procedure codes per row, with designation, timing, claim-type, logic notes" },
+    { sheet = "RA", header_row = 5, data_start_row = 7, data_end_row = 117, table = "ra", table_comment = "Risk-adjustment variable catalog (defined_by, variable_type/name/description)" },
+    { sheet = "RA_Details", header_row = 6, data_start_row = 8, data_end_row = 354, table = "ra_details", table_comment = "Code lists mapping diagnosis/procedure codes (several per row) to risk-adjustment variables, with timing/claim-type/logic notes" },
+]
+
+[files."2025-12-py2026-codes-list-tpcc.xlsx"]
+sheets = [
+    { sheet = "E_M_Prim_Care", header_row = 6, data_start_row = 8, data_end_row = 82, table = "e_m_prim_care", table_comment = "Evaluation & Management primary-care CPT/HCPCS code list with descriptions" },
+    { sheet = "Prim_Care_Services", header_row = 6, data_start_row = 8, data_end_row = 2366, table = "prim_care_services", table_comment = "Primary-care service CPT/HCPCS code list with descriptions" },
+    { sheet = "HCPCS_Surgery", header_row = 6, data_start_row = 8, data_end_row = 4425, table = "hcpcs_surgery", table_comment = "Surgery CPT/HCPCS code list with 90/10-day global indicator and per-quarter procedure-volume flags" },
+    { sheet = "HCPCS_Anesthesia", header_row = 6, data_start_row = 8, data_end_row = 314, table = "hcpcs_anesthesia", table_comment = "Anesthesia CPT/HCPCS code list with descriptions" },
+    { sheet = "HCPCS_Ther_Rad", header_row = 6, data_start_row = 8, data_end_row = 171, table = "hcpcs_ther_rad", table_comment = "Therapeutic-radiation CPT/HCPCS code list with descriptions" },
+    { sheet = "HCPCS_Chemo", header_row = 6, data_start_row = 8, data_end_row = 56, table = "hcpcs_chemo", table_comment = "Chemotherapy CPT/HCPCS code list with descriptions" },
+    { sheet = "Eligible_Clinicians", header_row = 5, data_start_row = 7, data_end_row = 102, table = "eligible_clinicians", table_comment = "Specialty codes with an include/exclude indicator for measure eligibility" },
+    { sheet = "HCC_Risk_Adjust", header_row = 5, data_start_row = 7, data_end_row = 443, table = "hcc_risk_adjust", table_comment = "HCC risk-adjustment variables (variable_type/name/description) with per-population applicability flags (Yes/No) across community / institutional / dialysis / new-enrollee / functioning-graft segments" },
+]
+

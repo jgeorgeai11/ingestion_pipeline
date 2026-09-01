@@ -1,0 +1,48 @@
+# The dependency list is the declaration of which engine components this
+# instance uses: policy_db ingests documents and Excel workbooks and embeds
+# the resulting corpus, so it depends on all three engine packages.
+[project]
+name = "policy-db-instance"
+version = "0.1.0"
+description = "The policy_db RAG corpus instance: acquisition scripts, configs, and grants"
+requires-python = ">=3.13"
+dependencies = [
+    "ingpipe-lib",
+    "ingpipe-acquisition",
+    "ingpipe-file-ingestion",
+    "ingpipe-excel-ingestion",
+    "ingpipe-embedding-generation",
+    # Direct dependencies of the cms_iom DISCOVERER, the only instance code
+    # that still touches the network: it fetches the IOMs index and each
+    # manual page and parses their markup. The download mechanics (and with
+    # them urllib3, which no instance module imports any more) moved into the
+    # acquisition package.
+    "requests>=2.32.5",
+    "beautifulsoup4>=4.14.3",
+]
+
+# Four console scripts across the workspace serve acquisition, and only one of
+# them needs instance code. download-usc-titles points STRAIGHT at the engine's
+# generic entry point, because that source's targets are computed from a URL
+# template and a title list; download-cms-iom goes through a three-line wrapper
+# that supplies the scraping discoverer. The two old per-source validators are
+# replaced by the engine's single manifest-driven data-val-downloads.
+[project.scripts]
+download-cms-iom = "policy_db_acquisition.cms_iom.download_cms_iom:main"
+download-usc-titles = "ingpipe_acquisition.runner:main"
+
+[tool.uv.sources]
+ingpipe-lib = { workspace = true }
+ingpipe-acquisition = { workspace = true }
+ingpipe-file-ingestion = { workspace = true }
+ingpipe-excel-ingestion = { workspace = true }
+ingpipe-embedding-generation = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# The distribution name (policy-db-instance) does not match the import
+# package (policy_db_acquisition), so hatchling needs the mapping spelled out.
+[tool.hatch.build.targets.wheel]
+packages = ["src/policy_db_acquisition"]

@@ -1,0 +1,51 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/usc_titles/ingest_usc42.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "usc"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/usc_titles/usc42/"
+documents = [
+    { file = "usc42_ch1to6A_Secs1to300mm-64@119-73not60.pdf", title = "USC Title 42: Public Health and Welfare — Chapters 1-6A (Secs. 1-300mm-64)", collection_path = "usc.usc42.usc42_ch1to6a_secs1to300mm_64_119_73not60" },
+    { file = "usc42_ch7to7A_Secs301to1400v@119-73not60.pdf", title = "USC Title 42: Public Health and Welfare — Chapters 7-7A (Secs. 301-1400v)", collection_path = "usc.usc42.usc42_ch7to7a_secs301to1400v_119_73not60" },
+    { file = "usc42_ch8to39_Secs1401to3259@119-73not60.pdf", title = "USC Title 42: Public Health and Welfare — Chapters 8-39 (Secs. 1401-3259)", collection_path = "usc.usc42.usc42_ch8to39_secs1401to3259_119_73not60" },
+    { file = "usc42_ch40to81_Secs3271to6892@119-73not60.pdf", title = "USC Title 42: Public Health and Welfare — Chapters 40-81 (Secs. 3271-6892)", collection_path = "usc.usc42.usc42_ch40to81_secs3271to6892_119_73not60" },
+    { file = "usc42_ch82to123_Secs6901to11851@119-73not60.pdf", title = "USC Title 42: Public Health and Welfare — Chapters 82-123 (Secs. 6901-11851)", collection_path = "usc.usc42.usc42_ch82to123_secs6901to11851_119_73not60" },
+    { file = "usc42_ch124to164_Secs11901to19404@119-73not60.pdf", title = "USC Title 42: Public Health and Welfare — Chapters 124-164 (Secs. 11901-19404)", collection_path = "usc.usc42.usc42_ch124to164_secs11901to19404_119_73not60" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/usc_titles/usc42/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/usc_titles/usc42/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "United States Code — ingested statutory titles (a subset of the Code), with section-level content and hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested USC title PDF, keyed by collection_path (an ltree encoding the title number and chapter range); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Full text content of each USC title split into sections — use for keyword search or reading statutory text"

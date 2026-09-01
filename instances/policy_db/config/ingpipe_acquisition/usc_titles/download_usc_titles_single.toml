@@ -1,0 +1,33 @@
+# Single-title configuration for the acquisition engine, usc_titles source.
+#
+# Usage: uv run download-usc-titles \
+#            --config instances/policy_db/config/ingpipe_acquisition/usc_titles/download_usc_titles_single.toml
+#
+# Fetches one title, for smoke-testing the lane end to end without pulling the
+# whole corpus. min_targets is 1 because that is what this config expects to
+# resolve -- the floor is per-config, not per-source.
+
+output_dir = "data/input/usc_titles"
+min_targets = 1
+request_delay_seconds = 2.0
+dry_run = false
+overwrite = false
+
+[http]
+retries = 3
+backoff_factor = 0.5
+timeout = 120.0
+
+[discovery]
+kind = "templated"
+variable = "title"
+values = ["05"]
+url_template = "https://uscode.house.gov/download/releasepoints/us/pl/119/73not60/pdf_usc{title}@119-73not60.zip"
+destination_template = "usc{title}/pdf_usc{title}@119-73not60.zip"
+group_template = "usc{title}"
+
+[extract]
+enabled = true
+keep = ["*.pdf"]
+flatten = true
+delete_archive = true

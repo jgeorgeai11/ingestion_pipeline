@@ -1,0 +1,36 @@
+---
+name: cr_20260816v01_structured_table
+goal: Address code quality issues identified in code/excel_ingestion/structured_table.py to align with python-development and sql-development skills; re-review since 20260626v01, paired with the grouped review of unit_tests/test_structured_table.py.
+created: 2026-08-16 19:29:14
+updated: 2026-08-17 09:48:46
+---
+
+## Implementation Plan
+
+1. [completed] Refresh the stale upstream-invariant docstring - `code/excel_ingestion/structured_table.py`
+   - 1.1. [minor] Lines 67-73: The `build_column_mapping` docstring justifies the last-wins collapse of byte-identical raw headers by claiming `excel_parser.parse_sheet` already collapses them upstream, and says normalization collisions "are handled by the dedup machinery". `excel_parser._validate_headers` now REJECTS both cases before `parse_sheet` returns — identical-after-cleaning headers raise `Duplicate header ... (identical after cleaning); rejecting sheet` (excel_parser.py:330-336) and normalization collisions raise `Headers ... collide to the same column name ... after normalization` (excel_parser.py:341-346). The justification is therefore stale: no production sheet ever reaches this function with a duplicate raw header or a normalization collision, so `deduplicate_columns` is now defense-in-depth rather than the mechanism that handles the case. Docstrings guideline 4 (keep docstrings current). Cross-reference: the paired test `test_build_column_mapping_normalizes_and_dedupes` pins the now-unreachable dedup path (see `cr_20260816v01_test_structured_table.md`, finding 4.1).
+        - Current: `` This is not data loss introduced here — ``excel_parser.parse_sheet`` already keys each row dict on the raw header, so identical raw headers are collapsed in the row data upstream before they reach this function. (Normalization collisions like ``Q1``/``q1`` are distinct raw strings and are handled by the dedup machinery.) ``
+        - Expected: `` Upstream, ``excel_parser._validate_headers`` rejects a sheet whose headers are identical after cleaning OR collide after normalization, so neither case reaches this function in the pipeline; the dedup machinery here is defense-in-depth for direct callers. ``
+        - Resolution: Implemented as specified — replaced the stale two-sentence justification in `build_column_mapping` (now lines 67-72) with the expected wording: the last-wins note stays, followed by "Upstream, ``excel_parser._validate_headers`` rejects a sheet whose headers are identical after cleaning OR collide after normalization, so neither case reaches this function in the pipeline; the dedup machinery here is defense-in-depth for direct callers." Verified against `excel_parser.py:330-347` (both rejections present). The paired test-side note (4.1 of `cr_20260816v01_test_structured_table.md`) remains deferred per its `[suggestion]` tag, so the docstring on `test_build_column_mapping_normalizes_and_dedupes` was left as written.
+
+2. [completed] Optional docstring and logging polish - `code/excel_ingestion/structured_table.py`
+   - 2.1. [suggestion] Line 372: `row[ROW_NUMBER_KEY]` raises `KeyError` when a row dict lacks the synthetic ordinal, but the `Raises` section (lines 314-316) documents only `ValueError`. Every pipeline row comes from `parse_sheet`, which always sets the key (excel_parser.py:253), so the failure is reachable only for a hand-built row from a direct caller.
+        - Current: `Raises:\n    ValueError: If an identifier is invalid or the compatibility guard\n        fails.`
+        - Expected: add `KeyError: If a row dict lacks ``ROW_NUMBER_KEY``.`
+        - Resolution: Deferred — optional; the key is guaranteed by the only production producer (`parse_sheet`), and the `rows` Args entry already states the dicts carry `ROW_NUMBER_KEY`, so the contract is documented in substance.
+   - 2.2. [suggestion] Lines 138 and 151-155: `ensure_table` emits two DEBUG records for one operation — the full DDL before execution and a summary ("Ensured ... with N data columns") after. Logging guideline 2 (condense messages) favors one record carrying both.
+        - Current: `logger.debug(f"Ensuring table {db_schema}.{table_name}:\n{ddl}")` ... `logger.debug(f"Ensured structured table ...")`
+        - Expected: a single post-execution DEBUG record carrying the DDL, the column count, and the comment-applied flag.
+        - Resolution: Deferred — the pre-execution record is deliberately emitted BEFORE `conn.execute`, so a DDL failure still leaves the exact statement in the log; collapsing to one post-execution record would lose that diagnostic on the failure path.
+
+## Skills with No Issues
+
+1. Type Hints: No issues found — every function (`_quote`, `build_column_mapping`, `ensure_table`, `reconcile_columns`, `_source_present`, `write_rows`) annotates all parameters and returns with modern syntax (`list[str]`, `dict[str, str]`, `str | int | None`, `Connection`/`Engine`, keyword-only `*` block, `-> None`/`-> bool`/`-> int`).
+2. Docstrings: One issue found (1.1, stale invariant). Structure is otherwise complete Google style — Args/Returns/Raises on every function, module docstring covering the identity/PK/FK design, and the `-1` skip marker documented at lines 310-312.
+3. Comments: No issues found — comments carry the "why": the empty-denominator guard (lines 208-210), the defensive re-delete under FK cascade (lines 331-333), the reconcile-after-ensure ordering (lines 348-349), the names-only ltree/NullType reflection (lines 194-197), the client-side interpolation of the COMMENT ON bind (lines 141-143), and the identity-vs-data column split (lines 43-45).
+4. Logging: One suggestion (2.2). Otherwise `logconfig.get_logger`, f-strings throughout, no `print`, no entry/exit noise; DEBUG for DDL/no-op paths, INFO for the skip and the row-count summary (lines 342-345, 380-383), WARNING for both schema-drift directions (lines 233-241).
+5. Exception Handling: No issues found — the compatibility guard raises a specific `ValueError` with the ratios, counts, and threshold interpolated (lines 215-221); `SQLAlchemyError` is left to propagate to the orchestrator, which catches `(ValueError, SQLAlchemyError)` per sheet (ingest_excel.py:698). No bare `except`, no generic-`Exception` wrapping.
+6. Data Validation: No issues found — `validate_sql_identifier` gates `db_schema`, `table_name`, `sheet_table`, and every generated `col_*` name at each entry point (lines 118-122, 189-192, 318-320) before any identifier is spliced; all values (`collection_path`, `sort_order`, every `col_*`, the COMMENT ON text) are bound parameters (lines 149, 266, 339, 368-376). No generated `col_*` name can shadow an identity bind key because `normalize_column_name` always prefixes `col_`.
+7. sql-development (best-practices): No issues found — generated DDL/DML is lowercase, the INSERT lists explicit columns, `_source_present` uses `select 1 ... limit 1` rather than a count, and the statements are single-purpose enough that the CTE conventions do not apply.
+8. Executable Scripts: N/A — library module invoked by `ingest_excel.py`, no `main()` or CLI surface.
+9. Unit Tests: N/A for this file — the paired suite is reviewed in `docs/code_review/excel_ingestion/unit_tests/cr_20260816v01_test_structured_table.md`.

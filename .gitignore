@@ -1,0 +1,38 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+# The venv lives at .venv.nosync with .venv symlinked to it: this repo sits
+# under an iCloud-synced ~/Documents, and iCloud skips paths ending .nosync.
+# Syncing a venv corrupts it (duplicated "lib 2/" directories, hidden .pth
+# files that CPython then ignores, stale console scripts) and `uv sync`
+# reports "Audited N packages" while repairing none of it. Recovery is in
+# MAINTAINING.packages.md §2 under Portability.
+.venv
+.venv.nosync/
+# `uv build` output. The maintaining docs tell operators to build wheels
+# (wheel-contents and isolated-install checks), so this would otherwise show
+# up in `git status` after every documented verification run.
+dist/
+# Real credential files at any depth (.env, .env.test, .env.provisioning,
+# instances/*/.env, ...); the tracked templates are re-included below.
+.env*
+!.env.example
+!*.env.example
+!.env.test.example
+!.env.provisioning.example
+# Skills and agents are owned by the dedicated skills repo, not versioned here;
+# the working copy under .claude/ stays on disk but out of this repo's history.
+.claude/
+.DS_Store
+# Corpus data and run logs live under each instance; the explicit patterns
+# (rather than bare logs/ and data/ matching at any depth) make the intent
+# visible and keep unrelated directories trackable.
+instances/*/data/
+instances/*/logs/
+# Fallback log location for engine-only runs is outside the repo (see
+# ingpipe_lib.paths.fallback_log_root), so no repo-root pattern is needed.

@@ -1,0 +1,62 @@
+# Configuration for ingest.py
+#
+# Usage: uv run ingest-files --config instances/policy_db/config/ingpipe_file_ingestion/cms_iom/ingest_policy_pub_100_02.toml --env-file instances/policy_db/.env
+
+# Pipeline settings
+overwrite = false
+
+# Database target (top-level; consumed by the load step and the
+# output validator)
+db_name = "policy_db"
+db_schema = "cms_iom"
+
+# Module — source files and metadata
+[module]
+source_dir = "data/input/cms_iom/2026-06-11/pub_100_02_benefit_policy/"
+documents = [
+    { file = "bp102c01.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 1 - Inpatient Hospital Services Covered Under Part A", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c01" },
+    { file = "bp102c02.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 2 - Inpatient Psychiatric Hospital Services", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c02" },
+    { file = "bp102c03pdf.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 3 - Duration of Covered Inpatient Services", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c03pdf" },
+    { file = "bp102c04.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 4 - Inpatient Psychiatric Benefit Days Reduction and Lifetime Limitation", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c04" },
+    { file = "bp102c05.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 5 - Lifetime Reserve Days", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c05" },
+    { file = "bp102c06.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 6 - Hospital Services Covered Under Part B", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c06" },
+    { file = "bp102c07.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 7 - Home Health Services", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c07" },
+    { file = "bp102c08pdf.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 8 - Coverage of Extended Care (SNF) Services Under Hospital Insurance", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c08pdf" },
+    { file = "bp102c09.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 9 - Coverage of Hospice Services Under Hospital Insurance", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c09" },
+    { file = "bp102c10.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 10 - Ambulance Services", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c10" },
+    { file = "bp102c11.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 11 - End Stage Renal Disease (ESRD)", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c11" },
+    { file = "bp102c12.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 12 - Comprehensive Outpatient Rehabilitation Facility (CORF) Coverage", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c12" },
+    { file = "bp102c13.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 13 - Rural Health Clinic (RHC) and Federally Qualified Health Center (FQHC) Services", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c13" },
+    { file = "bp102c14.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 14 - Medical Devices", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c14" },
+    { file = "bp102c15.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 15 - Covered Medical and Other Health Services", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c15" },
+    { file = "bp102c16.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 16 - General Exclusions from Coverage", collection_path = "cms_iom.pub_100_02_benefit_policy.bp102c16" },
+    { file = "chapter-17-opioid-treatment-programs-otps.pdf", title = "Pub. 100-02: Medicare Benefit Policy — Chapter 17 - Opioid Treatment Programs (OTPs)", collection_path = "cms_iom.pub_100_02_benefit_policy.chapter_17_opioid_treatment_programs_otps" },
+]
+
+# Step 1: Parse — Convert source files to Docling JSON (the lossless format
+# the clean step reads). No markdown is produced: the parse step's default
+# output_formats is JSON only.
+[parse]
+run = true
+parsed_dir = "data/parsed/cms_iom/2026-06-11/pub_100_02_benefit_policy/"
+# do_ocr and pdf_backend set the document-set defaults; either can be
+# overridden per file by adding the same key to a [module].documents entry.
+# do_ocr = false           # default: false; set true for scanned documents (OCR)
+# pdf_backend = "dlparse"  # default: "dlparse"; alternative: "pypdfium2"
+
+# Step 2: Clean — Parse Docling JSON into cleaned, db-ready sections JSON
+[clean]
+run = true
+cleaned_dir = "data/cleaned/cms_iom/2026-06-11/pub_100_02_benefit_policy/"
+
+# Step 3: Load — Insert documents and sections into PostgreSQL
+[load]
+run = true
+# document_table = "document"           # default: "document"
+# content_table = "document_content"    # default: "document_content"
+
+# COMMENT ON descriptions applied at load (idempotent — refreshed on
+# every run; surfaced by the MCP server's list_schemas / list_tables).
+schema_comment = "CMS Internet-Only Manuals — ingested policy documents stored as section-level text with hybrid (semantic + keyword) search embeddings"
+document_table_comment = "One row per ingested CMS IOM chapter document (PDF or .docx), keyed by collection_path (an ltree of <schema>.<manual folder>.<chapter>); holds title, n_parsed_sections, source_binary_hash, ingested_at"
+content_table_comment = "Section-level text of each CMS IOM chapter — one row per section (collection_path, sort_order) with heading_text, content_text, word_count, and page provenance; use for reading or keyword-filtering manual text"

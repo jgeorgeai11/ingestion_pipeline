@@ -1,0 +1,189 @@
+# Workspace root: coordinates the members under packages/ and instances/.
+# Deliberately has no [build-system] so the root itself is never installed
+# as a package -- it exists to pin the interpreter floor, hold the shared
+# development dependencies, and constrain the model stack for every member.
+[project]
+name = "ingestion-pipeline"
+version = "0.1.0"
+description = "Document acquisition, ingestion, and embedding generation for RAG corpora"
+readme = "README.md"
+requires-python = ">=3.13"
+# The root depends on every workspace member so a plain `uv sync` at the root
+# installs the whole workspace into one shared environment (the root itself is
+# still never built or installed -- no [build-system] below).
+dependencies = [
+    "ingpipe-lib",
+    "ingpipe-acquisition",
+    "ingpipe-file-ingestion",
+    "ingpipe-excel-ingestion",
+    "ingpipe-embedding-generation",
+    "policy-db-instance",
+]
+
+[tool.uv.sources]
+ingpipe-lib = { workspace = true }
+ingpipe-acquisition = { workspace = true }
+ingpipe-file-ingestion = { workspace = true }
+ingpipe-excel-ingestion = { workspace = true }
+ingpipe-embedding-generation = { workspace = true }
+policy-db-instance = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.14",
+    "mypy>=1.19",
+]
+
+[tool.uv.workspace]
+members = ["packages/*", "instances/*"]
+
+[tool.uv]
+# Hold the model-stack runtime in place during the Docling upgrade. transformers
+# is transitive (via sentence-transformers / docling-ibm-models), so it is
+# constrained here rather than added as a direct dependency; torch is imported
+# directly (generate_embeddings.py) and carries its <2.11 pin on the dependency
+# itself (in packages/ingpipe_embedding_generation). The latest docling stack
+# would otherwise permit transformers up to 5.8 and torch <3; we keep
+# transformers on 4.x and torch on the 2.10 line so the embedding/reranker
+# models and the already-embedded corpus are unaffected. The model-stack
+# upgrade is a separate, deliberate activity with a re-embed/reproducibility
+# gate.
+constraint-dependencies = ["transformers<5"]
+
+# ---------------------------------------------------------------------------
+# Static analysis (workspace-wide: one invocation covers every member).
+# Scope discipline: these configs target the correctness-relevant rule
+# families; a lint backlog must not block correctness work (activity
+# 20260820v01, decision 12). Every deliberate exclusion carries its reason.
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+# One pass over the engine packages and the instances.
+include = ["packages/**/*.py", "instances/**/*.py"]
+
+[tool.ruff.lint]
+# PLW1514 is preview-gated in the pinned ruff, and a bare selection of it is a
+# SILENT no-op: ruff 0.16.4 answers `--select PLW1514` with "Selection
+# `PLW1514` has no effect because preview is not enabled" and then reports
+# clean, so the rule would look active while enforcing nothing. preview = true
+# admits preview behavior; explicit-preview-rules = true then narrows that to
+# the preview rules named by exact code here, so no other preview rule and no
+# preview-mode change to the stable families above arrives with it. Verified
+# workspace-wide 2026-08-26: this combination reports the one real finding and
+# introduces no others.
+preview = true
+explicit-preview-rules = true
+select = [
+    "E4",      # pycodestyle imports
+    "E7",      # pycodestyle statements
+    "E9",      # pycodestyle runtime errors
+    "F",       # pyflakes
+    "I",       # isort (import ordering)
+    "BLE",     # blind except
+    "TRY004",  # type-check-without-type-error
+    "RUF",     # ruff-specific (incl. unsorted __all__, zip-instead-of-pairwise)
+    # Every text read and write declares encoding="utf-8". Without it Python
+    # uses the host's locale encoding, so the same file round-trips
+    # differently on the two development machines. This is a lint rule rather
+    # than a one-time sweep because a sweep does not stop the next instance --
+    # and, per activity 20260825v01, a grep could not even COUNT the current
+    # instances correctly (the calls are multi-line, so a single-line grep
+    # reported 76 where the rule itself found one). Binary-mode open(..., "rb"
+    # / "wb") is correctly unaffected.
+    "PLW1514", # unspecified-encoding
+]
+ignore = [
+    # TypeError-vs-ValueError on type checks: this codebase deliberately maps
+    # wrong-typed TOML config values to ValueError so every config error takes
+    # one abort path (main()'s `except ValueError`); switching those raises to
+    # TypeError would change documented exit behavior, not improve it.
+    "TRY004",
+    # f-strings in logging calls are this workspace's documented convention
+    # (python-development logging skill: "Use f-strings in log calls").
+    "G004",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Entry-point modules set environment defaults before importing torch;
+# the late imports are deliberate (E402 module-level import not at top).
+"packages/ingpipe_embedding_generation/src/ingpipe_embedding_generation/generate_embeddings.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["packages", "instances"]
+# The tree is fully annotated (124/124 functions) but was written before
+# mypy adoption; the checker starts from the pre-existing baseline rather
+# than a clean slate. The correctness-relevant portion of that baseline was
+# fixed on adoption; the remaining cosmetic strictness (untyped third-party
+# boundaries, dict-vs-TypedDict shapes in tests) is excluded below with
+# reasons, and finishing it is a recorded follow-up (activity 20260820v01,
+# decision 12).
+ignore_missing_imports = true
+check_untyped_defs = false
+# The three packages' tests/conftest.py files (added with the shared
+# ephemeral_schema fixture) all map to the module name "conftest", which mypy
+# rejects as duplicates; they are import-only re-exports, so excluding them
+# loses nothing.
+exclude = 'tests/conftest\.py$'
+
+[[tool.mypy.overrides]]
+# Every test module, enumerated because mypy's per-module patterns support
+# only trailing package globs (pkg.*), not name-prefix globs like test_*.
+module = [
+    "test_chunker",
+    "test_cleaned_models",
+    "test_cli",
+    "test_conventions",
+    "test_data_val_cleaned_json",
+    "test_data_val_embeddings",
+    "test_data_val_excel_inputs",
+    "test_data_val_excel_outputs",
+    "test_data_val_loaded_documents",
+    "test_data_val_downloads",
+    "test_db",
+    "test_ddl",
+    "test_discover_cms_iom",
+    "test_docling_section_parser",
+    "test_env",
+    "test_excel_parser",
+    "test_fetch",
+    "test_file_parser",
+    "test_generate_embeddings",
+    "test_generate_embeddings_db",
+    "test_sql_scripts",
+    "test_ingest",
+    "test_ingest_excel",
+    "test_ingpipe_excel_ingestion_utils",
+    "test_ingpipe_file_ingestion_utils",
+    "test_logconfig",
+    "test_manifest",
+    "test_paths",
+    "test_quality_report",
+    "test_runner",
+    "test_sql_comments",
+    "test_structured_table",
+    "test_testing",
+    "test_validators",
+]
+# Deliberate exclusions for TEST modules only (production code carries none of
+# these): test fixtures build TOML-shaped plain dicts and hand them to
+# signatures that take TypedDicts (SectionInput/SectionChunk) or precise value
+# types — structurally identical at runtime, and rewriting hundreds of fixture
+# literals as TypedDict constructions adds noise without catching bugs.
+# attr-defined/valid-type/index cover pytest/mocker fixture-typing quirks
+# (mocker attributes, dict-typed report payloads). Finishing this cosmetic
+# backlog is a recorded follow-up (activity 20260820v01, decision 12 and the
+# implementation notes).
+disable_error_code = [
+    "arg-type",
+    "attr-defined",
+    "index",
+    "typeddict-item",
+    "typeddict-unknown-key",
+    "valid-type",
+]
